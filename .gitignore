@@ -1,3 +1,13 @@
+# Project specific folders and files
+/datasets
+/results
+/runs
+/testing output
+.DS_Store
+.idea
+/models
+/test_noise
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
