@@ -5,10 +5,10 @@ from torch import optim
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from ddpm import Diffusion
-from model import EncoderDecoderBN, EncDecWithMHA, UnconditionalEncDecMHA
-from utils import setup_logging, get_data, save_images, save_midi
+from model import UnconditionalEncDecMHA
+from utils import setup_logging, get_data, save_midi
 import torch.nn as nn
-import numpy as np
+import argparse
 
 
 def train(args):
@@ -51,8 +51,7 @@ def train(args):
             save_midi(sampled_beats, os.path.join("results", args.run_name), epoch)
 
 
-def launch():
-    import argparse
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
     args.run_name = f"Unconditional_MHA"
@@ -66,7 +65,3 @@ def launch():
     args.prev_epoch = 20
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     train(args)
-
-
-if __name__ == "__main__":
-    launch()
