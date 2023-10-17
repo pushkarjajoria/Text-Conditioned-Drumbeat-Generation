@@ -6,7 +6,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from ddpm import Diffusion
 from model import UnconditionalEncDecMHA
-from utils import setup_logging, get_data, save_midi
+from utils.utils import setup_logging, get_data, save_midi
 import torch.nn as nn
 import argparse
 
@@ -21,7 +21,7 @@ def train(args):
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
     mse = nn.MSELoss()
     diffusion = Diffusion()
-    logger = SummaryWriter(os.path.join("runs", args.run_name))
+    logger = SummaryWriter(os.path.join("../runs", args.run_name))
     l = len(dataloader)     # Number of batches
     if args.warm_start:
         state_dict = torch.load(args.checkpoint_path)
@@ -46,9 +46,9 @@ def train(args):
             logger.add_scalar("MSE", loss.item(), global_step=epoch*l + i)
 
         if (epoch + 1) % 5 == 0:
-            torch.save(model.state_dict(), os.path.join("models", args.run_name, f"checkpoint.pt"))
+            torch.save(model.state_dict(), os.path.join("../models", args.run_name, f"checkpoint.pt"))
             sampled_beats = diffusion.sample(model, n=5).numpy().squeeze()
-            save_midi(sampled_beats, os.path.join("results", args.run_name), epoch)
+            save_midi(sampled_beats, os.path.join("../results", args.run_name), epoch)
 
 
 if __name__ == "__main__":
@@ -57,11 +57,11 @@ if __name__ == "__main__":
     args.run_name = f"Unconditional_MHA"
     args.epochs = 20
     args.batch_size = 128
-    args.dataset_path = "datasets/Groove_Monkee_Mega_Pack_GM.npy"
+    args.dataset_path = "../datasets/Groove_Monkee_Mega_Pack_GM.npy"
     args.lr = 3e-4
     args.time_embedding_dimension = 128
     args.warm_start = False
-    args.checkpoint_path = "models/Unconditional_MHA/checkpoint.pt"
+    args.checkpoint_path = "../models/Unconditional_MHA/checkpoint.pt"
     args.prev_epoch = 20
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     train(args)

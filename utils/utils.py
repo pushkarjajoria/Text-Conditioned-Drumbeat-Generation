@@ -1,16 +1,14 @@
 import json
 import os
 
-import numpy.matlib
 import torchvision
 from PIL import Image
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
 
-from midi_processing.mid2numpy import numpy2midi, save_numpy_as_midi
+from utils.midi_processing.mid2numpy import save_numpy_as_midi
 
 
 class MusicDataset(Dataset):
@@ -78,10 +76,10 @@ def get_image_data(args):
 
 
 def setup_logging(args):
-    os.makedirs("models", exist_ok=True)
-    os.makedirs("results", exist_ok=True)
-    os.makedirs(os.path.join("models", args.run_name), exist_ok=True)
-    os.makedirs(os.path.join("results", args.run_name), exist_ok=True)
+    os.makedirs("../../models", exist_ok=True)
+    os.makedirs("../../results", exist_ok=True)
+    os.makedirs(os.path.join("../../models", args.run_name), exist_ok=True)
+    os.makedirs(os.path.join("../../results", args.run_name), exist_ok=True)
     with open(f'models/{args.run_name}/hyperparamets.txt', 'w') as f:
         # Write dictionary to file as JSON
         f.write(json.dumps(vars(args), indent=4))
@@ -90,4 +88,4 @@ def setup_logging(args):
 if __name__ == "__main__":
     midis = np.random.rand(2, 9, 64)
     midis *= 127
-    save_midi(midis, os.path.join("results", "DDPM_Unconditional_groove_monkee"), 100)
+    save_midi(midis, os.path.join("../../results", "DDPM_Unconditional_groove_monkee"), 100)
