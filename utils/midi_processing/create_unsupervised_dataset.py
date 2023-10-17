@@ -1,10 +1,15 @@
 import os
 import fnmatch
+import random
 from collections import Counter
+
+import numpy as np
 import torch
+from matplotlib import pyplot as plt
 from torch.utils.data import Dataset
 
 from utils.midi_processing.mid2numpy import read_midi, midi2numpy
+from utils.text_processing.text_processor import get_bert_mini_embedding
 
 
 class MidiDataset(Dataset):
@@ -49,7 +54,7 @@ def get_top_tags(fileTagMap, topN):
     return topTags
 
 
-def get_filenames_and_tags(dataset_dir='../datasets/Groove_Monkee_Mega_Pack_GM'):
+def get_filenames_and_tags(dataset_dir='../../datasets/Groove_Monkee_Mega_Pack_GM'):
     # Dictionary to store file paths and tags
     file_tag_map = {}
 
@@ -65,3 +70,7 @@ def get_filenames_and_tags(dataset_dir='../datasets/Groove_Monkee_Mega_Pack_GM')
             file_tag_map[file_path] = tags
 
     return file_tag_map
+
+
+if __name__ == "__main__":
+    pass

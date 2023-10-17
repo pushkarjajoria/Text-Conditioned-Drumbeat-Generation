@@ -7,8 +7,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
-
-from utils.midi_processing.mid2numpy import save_numpy_as_midi
+from midi_processing.mid2numpy import save_numpy_as_midi
 
 
 class MusicDataset(Dataset):
@@ -88,4 +87,4 @@ def setup_logging(args):
 if __name__ == "__main__":
     midis = np.random.rand(2, 9, 64)
     midis *= 127
-    save_midi(midis, os.path.join("../../results", "DDPM_Unconditional_groove_monkee"), 100)
+    save_midi(midis, os.path.join("../results", "DDPM_Unconditional_groove_monkee"), 100)
