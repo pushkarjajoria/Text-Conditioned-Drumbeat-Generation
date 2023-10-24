@@ -1,0 +1,41 @@
+MidiEncoder:
+  number_timeslices: 100
+  number_instruments: 10
+  midi_embedding_dim: 256
+  dropout: 0.1
+
+TextEncoder:
+  dropout: 0.1
+
+ProjectionHead:
+  embedding_dim: 768
+  projection_dim: 256
+  dropout: 0.1
+
+CLAMP:
+  bert_embedding_dim: 768
+  latent_dimension: 256
+  midi_embedding_dim: 256
+  number_timeslices: 100
+  number_instruments: 10
+  dropout: 0.1
+  temperature: 0.07
+
+Training:
+  batch_size: 32
+  learning_rate: 0.001
+  optimizer: 'adam'
+  epochs: 20
+  gradient_clip: 5.0
+  weight_decay: 0.0005
+  learning_rate_decay: 0.95
+  patience: 3
+  device: 'cuda'
+  checkpoint_interval: 5
+  validate_interval: 1
+  log_interval: 100
+  dataset_path: './data/dataset/'
+  pretrained_model_path: None
+  save_model_path: './models/'
+  load_from_checkpoint: False
+  checkpoint_path: './models/checkpoint.pth'

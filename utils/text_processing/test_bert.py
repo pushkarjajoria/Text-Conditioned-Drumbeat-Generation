@@ -4,10 +4,8 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
-import os
-import openai
 
-from utils.midi_processing.create_unsupervised_dataset import get_filenames_and_tags
+from unsupervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags
 from utils.text_processing.text_processor import get_bert_mini_embedding
 
 
