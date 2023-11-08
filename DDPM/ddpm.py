@@ -3,12 +3,10 @@ import os
 from enum import Enum
 
 import torch
-import torch.nn as nn
-from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 from model import EncoderDecoderBN
-from utils import save_midi
+from utils.utils import save_midi
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s", level=logging.INFO, datefmt="%I:%M:%S")
 
@@ -97,5 +95,5 @@ if __name__ == "__main__":
     diff = Diffusion()
     model = EncoderDecoderBN()
     samples = diff.sample(model, 2).numpy()
-    save_midi(samples.squeeze(), os.path.join("results", "DDPM_Unconditional_groove_monkee"), 0)
+    save_midi(samples.squeeze(), os.path.join("../results", "DDPM_Unconditional_groove_monkee"), 0)
     print(samples)

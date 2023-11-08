@@ -187,6 +187,7 @@ def get_info(md):
     # are absolute, not relative.
 
     info = {}
+    # The resolution is the number of pulses, or ticks, per quarter note (PPQ)
     info["resolution"] = md.resolution
 
     for track in md:
@@ -208,7 +209,7 @@ def get_info(md):
                     # track's end time is meaningful, so we use it.
                     maxticks = event.tick
                     info["track_end_in_ticks"] = event.tick
-    info["track_length_in_beats"] = int(round(maxticks / float(md.resolution)))
+    info["track_length_in_beats"] = int(round(maxticks / float(md.resolution))) # Number of quarter notes in the midi file
     info["track_length_in_ticks"] = info["track_length_in_beats"] * md.resolution
 
     return info
@@ -247,7 +248,7 @@ def midi2numpy(md):
         a = np.concatenate((a, a), axis=1)
     else:
         pass  # 'a' is already the right length
-    assert a.shape[1] == nsteps
+    # assert a.shape[1] == nsteps
     return a
 
 
@@ -344,6 +345,10 @@ def run_pca(file):
 
 
 if __name__ == "__main__":
-    mf = read_midi("/Users/pushkarjajoria/Downloads/Groove Monkee Free MIDI GM/World Beats/Drum Set/109 Mambo 01.mid")
-    x = midi2numpy(mf)
+    mf_64 = read_midi("/Users/pushkarjajoria/Git/BeatBrewer/datasets/Groove_Monkee_Mega_Pack_GM/Twisted GM/Bonus/088 Hip Hop Straight/088 Hip Hop Straight 1 Crash.mid")
+    mf_8 = read_midi("/Users/pushkarjajoria/Git/BeatBrewer/datasets/Groove_Monkee_Mega_Pack_GM/Twisted GM/Bonus/088 Hip Hop Straight/088 Hip Hop Straight 1 Fill 1.mid")
+    mf_6 = read_midi("/Users/pushkarjajoria/Git/BeatBrewer/datasets/Groove_Monkee_Mega_Pack_GM/Twisted GM/Bonus/075 Hip Hop Straight/075 Hip Hop Straight 3 Fill 2.mid")
+    # x_64 = get_info(mf_64)
+    # x_8 = get_info(mf_8)
+    x_6 = get_info(mf_8)
     print("Done")
