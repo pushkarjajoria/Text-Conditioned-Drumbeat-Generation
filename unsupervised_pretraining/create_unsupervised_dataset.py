@@ -2,14 +2,11 @@ import collections
 import os
 import fnmatch
 import pickle
-import plotly.graph_objs as go
 from collections import Counter
 import torch
-from matplotlib import pyplot as plt
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
-from utils.midi_processing.mid2numpy import read_midi, midi2numpy, get_info
+from utils.midi_processing.mid2numpy import read_midi, midi2numpy
 
 
 class MidiDataset(Dataset):
@@ -17,12 +14,20 @@ class MidiDataset(Dataset):
         self.midi_tensors = []
         self.tags = []
         for file_path, tag in file_tag_map.items():
-            # Convert MIDI to NumPy array and then to PyTorch tensor at load time
-            numpy_data = midi2numpy(read_midi(file_path))
-            midi_tensor = torch.from_numpy(numpy_data)
+            try:
+                # Convert MIDI to NumPy array and then to PyTorch tensor at load time
+                numpy_data = midi2numpy(read_midi(file_path))
+                if numpy_data.shape[0] != 9 or numpy_data.shape[1] != 64:
+                    # For now, we are only working with 9 instruments in the midi file and 64 timeslices. The plan is to
+                    # include other time signatures in the training aswell.
+                    continue
+                midi_tensor = torch.from_numpy(numpy_data)
 
-            self.midi_tensors.append(midi_tensor)
-            self.tags.append(tag)
+                self.midi_tensors.append(midi_tensor)
+                self.tags.append(tag)
+            except:
+                print(f"Unable to process {file_path}")
+                continue
 
         self.transform = transform
 
@@ -54,8 +59,7 @@ def get_top_tags(file_tag_map, top_n):
     return topTags
 
 
-def get_filenames_and_tags(dataset_dir='../../datasets/Groove_Monkee_Mega_Pack_GM', filter_common_tags=True
-                           ):
+def get_filenames_and_tags(dataset_dir='../../datasets/Groove_Monkee_Mega_Pack_GM', filter_common_tags=True):
     # Dictionary to store file paths and tags
     file_tag_map = {}
     filter_list = ["..", "datasets", "Groove_Monkee_Mega_Pack_GM", "GM", "Bonus"]
@@ -68,7 +72,9 @@ def get_filenames_and_tags(dataset_dir='../../datasets/Groove_Monkee_Mega_Pack_G
 
             # Store in dictionary with file path as the key
             file_path = os.path.join(dir_name, fname)
-            tags = list(filter(lambda x: x not in filter_list, tags))
+            if filter_common_tags:
+                tags = list(filter(lambda x: x not in filter_list, tags))
+            tags = " ".join(tags)
             file_tag_map[file_path] = tags
 
     return file_tag_map

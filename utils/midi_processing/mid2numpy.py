@@ -202,8 +202,8 @@ def get_info(md):
                 info["time_sig_num"] = event.get_numerator()
                 info["time_sig_denom"] = event.get_denominator()
             if event.name == "End of Track":
-                if True:
-                    # if event.tick > 0:
+                # if True:
+                if event.tick > 0:
                     # sometimes a track is used only for metadata and
                     # has an end of track event with tick=0. this
                     # track's end time is meaningful, so we use it.
@@ -350,5 +350,5 @@ if __name__ == "__main__":
     mf_6 = read_midi("/Users/pushkarjajoria/Git/BeatBrewer/datasets/Groove_Monkee_Mega_Pack_GM/Twisted GM/Bonus/075 Hip Hop Straight/075 Hip Hop Straight 3 Fill 2.mid")
     # x_64 = get_info(mf_64)
     # x_8 = get_info(mf_8)
-    x_6 = get_info(mf_8)
+    x_6 = get_info(mf_6)
     print("Done")

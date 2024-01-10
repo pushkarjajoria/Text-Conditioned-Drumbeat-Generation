@@ -1,7 +1,9 @@
+import numpy as np
 import torch
 import yaml
 from torch import nn
 from transformers import BertTokenizer, BertModel
+import torch.nn.functional as F
 
 # Load config from YAML
 with open('config.yaml', 'r') as f:
@@ -9,7 +11,8 @@ with open('config.yaml', 'r') as f:
 
 
 class MidiEncoder(nn.Module):
-    def __init__(self, num_drum_instruments: int, num_timeslices: int, midi_embedding_dim: int, dropout: float):
+    def __init__(self, num_drum_instruments: int, num_timeslices: int, midi_embedding_dim: int,
+                 dropout: float, num_heads: int, transformer_ff_dim: int):
         super(MidiEncoder, self).__init__()
 
         self.num_drum_instruments = num_drum_instruments
@@ -20,9 +23,10 @@ class MidiEncoder(nn.Module):
 
         # Multi-Head Attention (MHA) layers (Transformers)
         self.transformer_layer = nn.TransformerEncoderLayer(
-            d_model=midi_embedding_dim,
-            nhead=8,  # number of heads in MHA
-            dim_feedforward=512,
+            d_model=midi_embedding_dim,  # This is the depth/size of the input embeddings (i.e., the number of
+            # features the input has). It's the same for the output.
+            nhead=num_heads,  # number of heads in MHA
+            dim_feedforward=transformer_ff_dim,
             dropout=dropout
         )
         self.transformer_encoder = nn.TransformerEncoder(self.transformer_layer, num_layers=4)
@@ -36,11 +40,14 @@ class MidiEncoder(nn.Module):
         )
 
     def forward(self, x):
+        x = x.float()
         # Reshape the piano roll
-        x = self.reshape(x)
-        x = x.permute(1, 0, 2)  # Shape needed for transformer: [seq_len, batch, embedding_dim]
+        # x = self.reshape(x)
+        x = x.permute(2, 0, 1)  # Shape needed for transformer: [seq_len, batch, embedding_dim]
 
         # Pass through transformer layers
+        # This part is working fine.
+        # We just need to make sure that the embedding dimention is transformed correctly from the number of instruments.
         x = self.transformer_encoder(x)
 
         # Flatten and pass through FC layers
@@ -52,7 +59,7 @@ class MidiEncoder(nn.Module):
 
 
 class TextEncoder(nn.Module):
-    def __init__(self, pretrained_model='google/bert_uncased_L-4_H-512_A-8'):
+    def __init__(self, dropout: float, pretrained_model='google/bert_uncased_L-4_H-512_A-8'):
         super(TextEncoder, self).__init__()
 
         # Set the device
@@ -76,6 +83,16 @@ class TextEncoder(nn.Module):
         sentence_embeddings = last_hidden_states.mean(dim=1)
 
         return sentence_embeddings
+
+    def freeze(self):
+        """Freeze all parameters of the model."""
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+    def unfreeze(self):
+        """Unfreeze all parameters of the model."""
+        for param in self.model.parameters():
+            param.requires_grad = True
 
 
 class ProjectionHead(nn.Module):
@@ -103,25 +120,106 @@ class ProjectionHead(nn.Module):
 
 
 class CLAMP(nn.Module):  # Contrastive LAnguage Music Pretraining
-    def __init__(self, bert_embedding_dim: int, latent_dimension: int, midi_embedding_dim: int, number_timeslices: int,
-                 number_instruments: int, dropout: float, temperature: float):
-        super().__init__()
+    def __init__(self):
+        super(CLAMP, self).__init__()
+
         # Define text and midi encoders
-        self.text_encoder = TextEncoder(config['TextEncoder']['dropout'])
-        self.midi_encoder = MidiEncoder(number_timeslices, number_instruments, latent_dimension, dropout)
+        self.text_encoder = TextEncoder(dropout=config['TextEncoder']['dropout'])
+        self.text_encoder.freeze()  # Freeze the weights of the Bert model
+        self.midi_encoder = MidiEncoder(num_drum_instruments=config['MidiEncoder']['number_instruments'],
+                                        num_timeslices=config['MidiEncoder']['number_timeslices'],
+                                        midi_embedding_dim=config['MidiEncoder']['midi_embedding_dim'],
+                                        dropout=config['MidiEncoder']['dropout'],
+                                        num_heads=config['MidiEncoder']['num_heads'],
+                                        transformer_ff_dim=config['MidiEncoder']['transformer_ff_dim'])
+
         # Define projection heads for text and midi
-        self.text_projection_head = ProjectionHead(bert_embedding_dim, latent_dimension, dropout)
-        self.midi_projection_head = ProjectionHead(midi_embedding_dim, latent_dimension, dropout)
+        bert_embedding_dim = config['TextEncoder']['bert_embedding_dim']
+        latent_dimension = config['ProjectionHead']['projection_dim']
+        midi_embedding_dim = config['MidiEncoder']['midi_embedding_dim']
+        dropout = config['ProjectionHead']['dropout']
+        self.text_projection_head = ProjectionHead(bert_embedding_dim, latent_dimension, dropout=dropout)
+        self.midi_projection_head = ProjectionHead(midi_embedding_dim, latent_dimension, dropout=dropout)
+        temperature_value = float(config['Training']['temperature'])  # Ensure it's a float
+        self.temperature = nn.Parameter(torch.tensor([temperature_value]))
+
+    def forward(self, piano_rolls, texts):
+        """
+        :param texts: A list of text inputs
+        :param piano_rolls: A batch of numpy piano rolls
+        :return: Projected embeddings for text and midi
+        """
+
+        # Get embeddings from the encoders
+        text_embeddings = self.text_encoder(texts)
+        midi_embeddings = self.midi_encoder(piano_rolls)
+
+        # Project the embeddings to the common latent space
+        text_projected = self.text_projection_head(text_embeddings)
+        midi_projected = self.midi_projection_head(midi_embeddings)
+
+        return text_projected, midi_projected
+
+    def contrastive_loss(self, text_embeddings, midi_embeddings):
+        """
+        Computes the CLIP-style contrastive loss.
+
+        Parameters:
+        text_embeddings (torch.Tensor): Embeddings for text, shape (batch_size, embedding_dim)
+        midi_embeddings (torch.Tensor): Embeddings for MIDI, shape (batch_size, embedding_dim)
+        temperature (float): Temperature parameter for scaling the logits
+
+        Returns:
+        torch.Tensor: The contrastive loss
+        """
+        # # Normalize the embeddings
+        text_embeddings = F.normalize(text_embeddings, dim=1)
+        midi_embeddings = F.normalize(midi_embeddings, dim=1)
+
+        # Compute the similarity matrix (batch_size x batch_size)
+        logits = torch.matmul(text_embeddings, midi_embeddings.T) * torch.exp(self.temperature)
+
+        # Labels for the positive pairs
+        labels = torch.arange(logits.size(0), device=logits.device)
+
+        # Calculate the loss for text-to-MIDI and MIDI-to-text directions
+        loss_text_to_midi = F.cross_entropy(logits, labels)
+        loss_midi_to_text = F.cross_entropy(logits.T, labels)
+
+        # Average the bidirectional losses
+        loss = (loss_text_to_midi + loss_midi_to_text) / 2
+
+        return loss
 
 
 if __name__ == "__main__":
+    def create_array(r, c):
+        # Create an array of zeros
+        arr = np.zeros((r, c))
+
+        # Determine the number of entries that are 10% of x * y
+        num_samples = int(0.1 * r * c)
+
+        # Sample values from the normal distribution
+        samples = np.random.normal(loc=0.5, scale=0.1, size=num_samples)
+
+        # Randomly choose indices to place the sampled values
+        indices = np.random.choice(r * c, num_samples, replace=False)
+        np.put(arr, indices, samples)
+        return arr
+
     # Initialize CLAMP model using parameters from the config file
     clamp_model = CLAMP(
-        bert_embedding_dim=config['CLAMP']['bert_embedding_dim'],
-        latent_dimension=config['CLAMP']['latent_dimension'],
-        midi_embedding_dim=config['CLAMP']['midi_embedding_dim'],
+        bert_embedding_dim=config['TextEncoder']['bert_embedding_dim'],
+        latent_dimension=config['ProjectionHead']['projection_dim'],
+        midi_embedding_dim=config['MidiEncoder']['midi_embedding_dim'],
         number_timeslices=config['CLAMP']['number_timeslices'],
         number_instruments=config['CLAMP']['number_instruments'],
-        dropout=config['CLAMP']['dropout'],
         temperature=config['CLAMP']['temperature']
     )
+
+    text = "Rock 90s Hard Groovy Drums"
+    midi = torch.tensor(create_array(config['CLAMP']['number_instruments'], config['CLAMP']['number_timeslices'])).unsqueeze(0)
+    clamp_model = clamp_model.float()
+    text_emb, midi_emb = clamp_model(text, midi)
+    print("Done")

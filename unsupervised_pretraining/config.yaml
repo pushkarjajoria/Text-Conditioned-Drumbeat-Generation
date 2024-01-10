@@ -1,25 +1,23 @@
 MidiEncoder:
-  number_timeslices: 100
-  number_instruments: 10
-  midi_embedding_dim: 256
+  number_timeslices: 64
+  number_instruments: 9
+  midi_embedding_dim: 9
   dropout: 0.1
+  transformer_ff_dim: 512
+  num_heads: 3
 
 TextEncoder:
+  bert_embedding_dim: 512
   dropout: 0.1
 
+
 ProjectionHead:
-  embedding_dim: 768
   projection_dim: 256
   dropout: 0.1
 
 CLAMP:
-  bert_embedding_dim: 768
-  latent_dimension: 256
-  midi_embedding_dim: 256
   number_timeslices: 100
   number_instruments: 10
-  dropout: 0.1
-  temperature: 0.07
 
 Training:
   batch_size: 32
@@ -39,3 +37,5 @@ Training:
   save_model_path: './models/'
   load_from_checkpoint: False
   checkpoint_path: './models/checkpoint.pth'
+  temperature: 0.07
+
