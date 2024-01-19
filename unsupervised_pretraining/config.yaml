@@ -23,7 +23,7 @@ Training:
   batch_size: 32
   learning_rate: 0.001
   optimizer: 'adam'
-  epochs: 20
+  epochs: 10
   gradient_clip: 5.0
   weight_decay: 0.0005
   learning_rate_decay: 0.95
@@ -34,8 +34,8 @@ Training:
   log_interval: 100
   dataset_path: './data/dataset/'
   pretrained_model_path: None
-  save_model_path: './models/'
+  save_model_path: './trained_models/'
   load_from_checkpoint: False
-  checkpoint_path: './models/checkpoint.pth'
+  checkpoint_path: './checkpoint/'
   temperature: 0.07
 

@@ -30,8 +30,52 @@ class UnconditionalEncDecMHA(nn.Module):
         encoded_time = self.pos_encoding(t)
 
         # Transform X using bilstm and concatenate with encoded_time
+        h, _ = self.bilstm(X) # MIDI Features -> 1 vector
+        concat_h = torch.cat([encoded_time, h], dim=-1)
+
+        # Pass concatenated tensor through MultiheadAttention
+        h2, _ = self.mha(concat_h.permute(1, 0, 2), concat_h.permute(1, 0, 2), concat_h.permute(1, 0, 2))
+        h2 = h2.permute(1, 0, 2)
+
+        # Decode using linear layer
+        out = self.linear(h2)
+
+        return out
+
+
+class ConditionalEncDecMHA(nn.Module):
+    def __init__(self, time_dimension, device='cpu'):
+        super(ConditionalEncDecMHA, self).__init__()
+        self.time_dimension = time_dimension
+        self.bilstm = nn.LSTM(9, 96, bidirectional=True, batch_first=True)
+        self.linear = nn.Linear(256, 64)
+        self.mha = nn.MultiheadAttention(256, 8)
+        self.device = device
+
+    def pos_encoding(self, t):
+        channels = self.time_dimension
+        inv_freq = 1.0 / (
+                10000
+                ** (torch.arange(0, channels, 2, device=self.device).float() / channels)
+        )
+        pos_enc_a = torch.sin(t.unsqueeze(1) * inv_freq.unsqueeze(0))
+        pos_enc_b = torch.cos(t.unsqueeze(1) * inv_freq.unsqueeze(0))
+        pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
+        return pos_enc
+
+    def forward(self, X, t, text_embedding):
+        # Encode t using provided function pos_encoding and reshape
+        X = X.squeeze()
+        batch_size = X.shape[0]
+        encoded_time = self.pos_encoding(t)
+
+        # Transform X using bilstm and concatenate with encoded_time
         h, _ = self.bilstm(X)
         concat_h = torch.cat([encoded_time, h], dim=-1)
+
+        # Also need to concat the text embeddings here
+        concat_text_embeddings = torch.cat([concat_h, text_embedding], dim=-1)
+        # Use this as the input to the MHA
 
         # Pass concatenated tensor through MultiheadAttention
         h2, _ = self.mha(concat_h.permute(1, 0, 2), concat_h.permute(1, 0, 2), concat_h.permute(1, 0, 2))

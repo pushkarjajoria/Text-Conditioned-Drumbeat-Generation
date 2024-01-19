@@ -45,7 +45,6 @@ class Diffusion:
 
     def noise_drum_beats(self, x, t):
         """
-
         :param x: drum beats of shape (batch x channel x num_instrument=9, num_time_slices=64 sixteenth notes.)
         :param t: number of noising time steps of shape (batch_size, )
         :return: Noised drum beats and the sampled noise both with the shape the same as x

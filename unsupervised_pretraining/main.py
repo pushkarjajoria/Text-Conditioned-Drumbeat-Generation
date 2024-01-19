@@ -1,10 +1,12 @@
+import os
+from datetime import datetime
+
 import torch
 from torch.optim.lr_scheduler import StepLR
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 import yaml
 from tqdm import tqdm
 import wandb
-
 from unsupervised_pretraining.create_unsupervised_dataset import MidiDataset, get_filenames_and_tags
 from unsupervised_pretraining.model import CLAMP
 
@@ -20,6 +22,18 @@ BATCH_SIZE = config['Training']['batch_size']
 LEARNING_RATE = config['Training']['learning_rate']
 WEIGHT_DECAY = config['Training']['weight_decay']
 CHECKPOINT_INTERVAL = config['Training']['checkpoint_interval']
+
+
+def save_checkpoint(model, run_name, epoch, wandb, save_type="checkpoint"):
+    path = os.path.join(save_type, run_name)
+    os.makedirs(path, exist_ok=True)
+    filename = f'model_epoch_{epoch}.pth' if epoch \
+        else 'model_final.pth'
+    full_path = os.path.join(path, filename)
+    # Save locally
+    torch.save(model.state_dict(), full_path)
+    # Save on wandb - make sure the file is in the current directory or subdirectory.
+    wandb.save(full_path)
 
 
 class EarlyStopping:
@@ -43,7 +57,9 @@ class EarlyStopping:
 
 
 if __name__ == "__main__":
-    wandb.init(project="your_project_name", entity="your_wandb_username")
+    project_name = 'Unsupervised Pretraining' if torch.cuda.is_available() else '[Dev][Mac] Unsupervised Pretraining'
+    run_name = datetime.now().strftime("%m%d_%H%M")
+    wandb.init(project=project_name, name=run_name)
     # Initialize Dataloader
     file_name_and_tags = get_filenames_and_tags(dataset_dir="../datasets/Groove_Monkee_Mega_Pack_GM", filter_common_tags=True)
     train_dataset = MidiDataset(file_name_and_tags)  # Placeholder paths
@@ -52,11 +68,10 @@ if __name__ == "__main__":
     # Initialize model, optimizer, and learning rate scheduler
     model = CLAMP()
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-    scheduler = StepLR(optimizer, step_size=30, gamma=0.1)  # Example scheduler
+    scheduler = StepLR(optimizer, step_size=20, gamma=0.3)
 
     # Early stopping
     early_stopping = EarlyStopping(patience=10, min_delta=0.001)
-
     # Training loop
     for epoch in range(EPOCHS):
         epoch_loss = 0.0
@@ -66,7 +81,6 @@ if __name__ == "__main__":
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
             epoch_loss += loss.item()
 
         epoch_loss /= len(train_loader)
@@ -80,16 +94,16 @@ if __name__ == "__main__":
 
         # Save model checkpoint periodically
         if (epoch+1) % CHECKPOINT_INTERVAL == 0:
-            torch.save(model.state_dict(), f"model_checkpoint_epoch_{epoch}.pth")
+            save_checkpoint(model, run_name, epoch, wandb)
 
         # Early stopping check
         early_stopping(epoch_loss)
         if early_stopping.early_stop:
-            print("Early stopping triggered")
+            print(f"Early stopping triggered after {epoch} epochs")
             break
 
     # Save final model
-    torch.save(model.state_dict(), "final_model.pth")
+    save_checkpoint(model, run_name, None, wandb, save_type="trained_models")
 
     # Close WandB run
     wandb.finish()

@@ -75,11 +75,11 @@ def get_image_data(args):
 
 
 def setup_logging(args):
-    os.makedirs("../../models", exist_ok=True)
+    os.makedirs("../../checkpoint", exist_ok=True)
     os.makedirs("../../results", exist_ok=True)
-    os.makedirs(os.path.join("../../models", args.run_name), exist_ok=True)
+    os.makedirs(os.path.join("../../checkpoint", args.run_name), exist_ok=True)
     os.makedirs(os.path.join("../../results", args.run_name), exist_ok=True)
-    with open(f'models/{args.run_name}/hyperparamets.txt', 'w') as f:
+    with open(f'checkpoint/{args.run_name}/hyperparamets.txt', 'w') as f:
         # Write dictionary to file as JSON
         f.write(json.dumps(vars(args), indent=4))
 
