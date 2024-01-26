@@ -45,13 +45,13 @@ class Diffusion:
 
     def noise_drum_beats(self, x, t):
         """
-        :param x: drum beats of shape (batch x channel x num_instrument=9, num_time_slices=64 sixteenth notes.)
+        :param x: drum beats of shape (batch x num_instrument=9, num_time_slices=64 sixteenth notes.)
         :param t: number of noising time steps of shape (batch_size, )
         :return: Noised drum beats and the sampled noise both with the shape the same as x
         """
-        # Nones are changing tensor of shape (batch,) -> (batch, 1, 1, 1)
-        sqrt_alpha_hat = torch.sqrt(self.alpha_hat[t])[:, None, None, None]
-        sqrt_one_minus_alpha_ht = torch.sqrt(1. - self.alpha_hat[t])[:, None, None, None]
+        # Nones are changing tensor of shape (batch,) -> (batch, 1, 1)
+        sqrt_alpha_hat = torch.sqrt(self.alpha_hat[t])[:, None, None]
+        sqrt_one_minus_alpha_ht = torch.sqrt(1. - self.alpha_hat[t])[:, None, None]
         epsilon = torch.randn_like(x)  # ε
         """
         Refer to the paper to understand this equation better but basically,

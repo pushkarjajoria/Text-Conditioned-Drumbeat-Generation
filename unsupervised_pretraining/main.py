@@ -13,7 +13,7 @@ from unsupervised_pretraining.model import CLAMP
 
 # Other necessary imports: torchvision, numpy, etc.
 
-with open('config.yaml', 'r') as file:
+with open('unsupervised_pretraining/config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 # Define hyperparameters from the config

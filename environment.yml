@@ -1,0 +1,15 @@
+name: audio_ddpm
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - ca-certificates
+  - openssl
+  - certifi
+  - pytorch
+  - ipywidgets
+  - torchvision
+  - mido
+  - plotly
+  - wandb
+prefix: /opt/homebrew/Caskroom/miniconda/base/envs/audio_ddpm

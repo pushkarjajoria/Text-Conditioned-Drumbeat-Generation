@@ -22,11 +22,12 @@ class MidiDataset(Dataset):
                     # include other time signatures in the training aswell.
                     continue
                 midi_tensor = torch.from_numpy(numpy_data)
-
+                midi_tensor = midi_tensor/127.  # Normalize the midi date from [0-1]
                 self.midi_tensors.append(midi_tensor)
                 self.tags.append(tag)
-            except:
+            except ZeroDivisionError as e:
                 print(f"Unable to process {file_path}")
+                print(e.args)
                 continue
 
         self.transform = transform

@@ -7,10 +7,10 @@
 .idea
 /models
 /test_noise
+*/wandb
 
 */trained_models
 */checkpoint
-*/wandb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

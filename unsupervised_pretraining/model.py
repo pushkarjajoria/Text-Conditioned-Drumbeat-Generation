@@ -6,7 +6,7 @@ from transformers import BertTokenizer, BertModel
 import torch.nn.functional as F
 
 # Load config from YAML
-with open('config.yaml', 'r') as f:
+with open('/Users/pushkarjajoria/Git/BeatBrewer/unsupervised_pretraining/config.yaml', 'r') as f:
     config = yaml.safe_load(f)
 
 
@@ -114,7 +114,7 @@ class ProjectionHead(nn.Module):
         x = self.gelu(projected)
         x = self.fc(x)
         x = self.dropout(x)
-        x = x + projected
+        x = x + projected   # Residual Connection
         x = self.layer_norm(x)
         return x
 
@@ -151,11 +151,11 @@ class CLAMP(nn.Module):  # Contrastive LAnguage Music Pretraining
         """
 
         # Get embeddings from the encoders
-        text_embeddings = self.text_encoder(texts)
+        bert_embeddings = self.text_encoder(texts)
         midi_embeddings = self.midi_encoder(piano_rolls)
 
         # Project the embeddings to the common latent space
-        text_projected = self.text_projection_head(text_embeddings)
+        text_projected = self.text_projection_head(bert_embeddings)
         midi_projected = self.midi_projection_head(midi_embeddings)
 
         return text_projected, midi_projected
@@ -190,6 +190,10 @@ class CLAMP(nn.Module):  # Contrastive LAnguage Music Pretraining
         loss = (loss_text_to_midi + loss_midi_to_text) / 2
 
         return loss
+
+    def get_text_embeddings(self, texts):
+        with torch.no_grad():
+            return self.text_projection_head(self.text_encoder(texts))
 
 
 if __name__ == "__main__":

@@ -48,7 +48,7 @@ class ConditionalEncDecMHA(nn.Module):
         super(ConditionalEncDecMHA, self).__init__()
         self.time_dimension = time_dimension
         self.bilstm = nn.LSTM(9, 96, bidirectional=True, batch_first=True)
-        self.linear = nn.Linear(256, 64)
+        self.linear = nn.Linear(256, 9)
         self.mha = nn.MultiheadAttention(256, 8)
         self.device = device
 
@@ -65,20 +65,21 @@ class ConditionalEncDecMHA(nn.Module):
 
     def forward(self, X, t, text_embedding):
         # Encode t using provided function pos_encoding and reshape
-        X = X.squeeze()
-        batch_size = X.shape[0]
+        X = X.squeeze().permute(0, 2, 1)  # Batch x 64(seq_len) x 9(features/instruments)
         encoded_time = self.pos_encoding(t)
 
         # Transform X using bilstm and concatenate with encoded_time
         h, _ = self.bilstm(X)
-        concat_h = torch.cat([encoded_time, h], dim=-1)
-
+        time_text_context = torch.cat([encoded_time, text_embedding], dim=-1)
+        # Change the shape from batch x features to batch x seq_len x features
+        time_text_context = time_text_context[:, None, :].expand(-1, 64, -1)
         # Also need to concat the text embeddings here
-        concat_text_embeddings = torch.cat([concat_h, text_embedding], dim=-1)
+        mha_input = torch.cat([h, time_text_context], dim=-1)
         # Use this as the input to the MHA
 
         # Pass concatenated tensor through MultiheadAttention
-        h2, _ = self.mha(concat_h.permute(1, 0, 2), concat_h.permute(1, 0, 2), concat_h.permute(1, 0, 2))
+        mha_input = mha_input.permute(1, 0, 2)
+        h2, _ = self.mha(mha_input, mha_input, mha_input)
         h2 = h2.permute(1, 0, 2)
 
         # Decode using linear layer

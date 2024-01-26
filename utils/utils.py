@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
-from midi_processing.mid2numpy import save_numpy_as_midi
+from utils.midi_processing.mid2numpy import save_numpy_as_midi
 
 
 class MusicDataset(Dataset):
