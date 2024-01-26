@@ -61,7 +61,7 @@ if __name__ == "__main__":
     run_name = datetime.now().strftime("%m%d_%H%M")
     wandb.init(project=project_name, name=run_name)
     # Initialize Dataloader
-    file_name_and_tags = get_filenames_and_tags(dataset_dir="../datasets/Groove_Monkee_Mega_Pack_GM", filter_common_tags=True)
+    file_name_and_tags = get_filenames_and_tags(dataset_dir="datasets/Groove_Monkee_Mega_Pack_GM", filter_common_tags=True)
     print(f"Length of dataset: {len(file_name_and_tags)}")
     train_dataset = MidiDataset(file_name_and_tags)  # Placeholder paths
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
