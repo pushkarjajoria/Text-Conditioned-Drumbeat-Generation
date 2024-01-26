@@ -25,7 +25,7 @@ CHECKPOINT_INTERVAL = config['Training']['checkpoint_interval']
 
 
 def save_checkpoint(model, run_name, epoch, wandb, save_type="checkpoint"):
-    path = os.path.join(save_type, run_name)
+    path = os.path.join("unsupervised_pretraining", save_type, run_name)
     os.makedirs(path, exist_ok=True)
     filename = f'model_epoch_{epoch}.pth' if epoch \
         else 'model_final.pth'

@@ -5,7 +5,7 @@ cd ~/Git/BeatBrewer/
 
 # Activate the conda environment
 source ~/miniconda3/etc/profile.d/conda.sh
-conda activate aligner_train
+conda activate ddpm
 
 # Load necessary modules
 module load cuda/11.4
@@ -15,4 +15,4 @@ export WANDB_MODE=offline
 echo "Weights and bias env variable = $WANDB_MODE"
 
 # Run the training script
-python main.py
+python -m unsupervised_pretraining.main
