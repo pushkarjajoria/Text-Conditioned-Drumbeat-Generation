@@ -126,6 +126,7 @@ class CLAMP(nn.Module):  # Contrastive LAnguage Music Pretraining
         super(CLAMP, self).__init__()
 
         # Define text and midi encoders
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.text_encoder = TextEncoder(dropout=config['TextEncoder']['dropout'])
         self.text_encoder.freeze()  # Freeze the weights of the Bert model
         self.midi_encoder = MidiEncoder(num_drum_instruments=config['MidiEncoder']['number_instruments'],
