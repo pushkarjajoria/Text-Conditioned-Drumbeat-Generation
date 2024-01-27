@@ -40,6 +40,7 @@ class MidiEncoder(nn.Module):
         )
 
     def forward(self, x):
+        x = x.to(self.device).float()
         x = x.float()
         # Reshape the piano roll
         # x = self.reshape(x)
@@ -110,6 +111,7 @@ class ProjectionHead(nn.Module):
         self.layer_norm = nn.LayerNorm(projection_dim)
 
     def forward(self, x):
+        x = x.to(self.device)
         projected = self.projection(x)
         x = self.gelu(projected)
         x = self.fc(x)
@@ -144,6 +146,8 @@ class CLAMP(nn.Module):  # Contrastive LAnguage Music Pretraining
         self.temperature = nn.Parameter(torch.tensor([temperature_value]))
 
     def forward(self, piano_rolls, texts):
+        piano_rolls = piano_rolls.to(self.device)
+        texts = texts.to(self.device)
         """
         :param texts: A list of text inputs
         :param piano_rolls: A batch of numpy piano rolls
