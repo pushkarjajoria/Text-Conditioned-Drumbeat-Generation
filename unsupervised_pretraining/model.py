@@ -14,6 +14,7 @@ class MidiEncoder(nn.Module):
     def __init__(self, num_drum_instruments: int, num_timeslices: int, midi_embedding_dim: int,
                  dropout: float, num_heads: int, transformer_ff_dim: int):
         super(MidiEncoder, self).__init__()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.num_drum_instruments = num_drum_instruments
         self.num_timeslices = num_timeslices
