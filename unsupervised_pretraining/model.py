@@ -99,6 +99,7 @@ class TextEncoder(nn.Module):
 
 class ProjectionHead(nn.Module):
     def __init__(self, embedding_dim, projection_dim, dropout):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         super().__init__()
         # Linear layer for projection
         self.projection = nn.Linear(embedding_dim, projection_dim)
