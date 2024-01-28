@@ -23,7 +23,7 @@ Training:
   batch_size: 32
   learning_rate: 0.001
   optimizer: 'adam'
-  epochs: 10
+  epochs: 100
   gradient_clip: 5.0
   weight_decay: 0.0005
   learning_rate_decay: 0.95
