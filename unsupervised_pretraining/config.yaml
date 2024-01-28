@@ -12,7 +12,7 @@ TextEncoder:
 
 
 ProjectionHead:
-  projection_dim: 32
+  projection_dim: 64
   dropout: 0.1
 
 CLAMP:
