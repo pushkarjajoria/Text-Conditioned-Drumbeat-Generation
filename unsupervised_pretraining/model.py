@@ -146,7 +146,7 @@ class CLAMP(nn.Module):  # Contrastive LAnguage Music Pretraining
         self.text_projection_head = ProjectionHead(bert_embedding_dim, latent_dimension, dropout=dropout)
         self.midi_projection_head = ProjectionHead(midi_embedding_dim, latent_dimension, dropout=dropout)
         temperature_value = float(config['Training']['temperature'])  # Ensure it's a float
-        self.temperature = nn.Parameter(torch.tensor([temperature_value]))
+        self.temperature = nn.Parameter(torch.tensor([temperature_value])).to(self.device)
         self.text_encoder.to(self.device)
         self.midi_encoder.to(self.device)
         self.text_projection_head.to(self.device)
