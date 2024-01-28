@@ -7,7 +7,7 @@
 .idea
 /models
 /test_noise
-*/wandb
+unsupervised_pretraining/wandb
 
 */trained_models
 */checkpoint
