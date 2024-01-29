@@ -69,7 +69,7 @@ class TextEncoder(nn.Module):
 
         # Load the pre-trained model tokenizer and the model
         self.tokenizer = BertTokenizer.from_pretrained(pretrained_model)
-        self.model = BertModel.from_pretrained(pretrained_model).to(self.device)
+        self.model = BertModel.from_pretrained(pretrained_model, from_tf=True).to(self.device)
 
     def forward(self, texts):
         # Tokenize the input texts
