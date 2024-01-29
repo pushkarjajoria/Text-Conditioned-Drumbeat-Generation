@@ -4,8 +4,6 @@ from os.path import join, isdir, isfile
 from pprint import pformat, pprint
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 from sklearn.decomposition import PCA
 from collections import Counter
 
@@ -83,21 +81,21 @@ def convert_time(ticks, maxticks, nsteps_this_loop):
     return x
 
 
-def write_image(a, filename):
-    """Save an image of the pattern."""
-    # print(a.shape)
-    fig = plt.figure(figsize=(10, 4))
-    ax = fig.add_subplot(1, 1, 1)
-    im = ax.matshow(a, cmap=cm.gray_r, interpolation="nearest")
-    ax.tick_params(length=0)
-    xticks = range(0, nsteps, 4)
-    ax.set_xticks(xticks)
-    ax.set_xticklabels(map(str, xticks), fontsize=8)
-    ax.set_yticks(range(len(names)))
-    ax.set_yticklabels(names, fontsize=8)
-    ax.invert_yaxis()
-    fig.savefig(filename + ".pdf")
-    plt.close()
+# def write_image(a, filename):
+#     """Save an image of the pattern."""
+#     # print(a.shape)
+#     fig = plt.figure(figsize=(10, 4))
+#     ax = fig.add_subplot(1, 1, 1)
+#     im = ax.matshow(a, cmap=cm.gray_r, interpolation="nearest")
+#     ax.tick_params(length=0)
+#     xticks = range(0, nsteps, 4)
+#     ax.set_xticks(xticks)
+#     ax.set_xticklabels(map(str, xticks), fontsize=8)
+#     ax.set_yticks(range(len(names)))
+#     ax.set_yticklabels(names, fontsize=8)
+#     ax.invert_yaxis()
+#     fig.savefig(filename + ".pdf")
+#     plt.close()
 
 
 def numpy2midi(n):
