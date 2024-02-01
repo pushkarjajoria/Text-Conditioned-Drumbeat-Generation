@@ -44,12 +44,15 @@ class UnconditionalEncDecMHA(nn.Module):
 
 
 class ConditionalEncDecMHA(nn.Module):
-    def __init__(self, time_dimension, text_embedding_dim, device='cpu'):
+    def __init__(self, time_dimension, text_embedding_dim, device, lstm_embedding_dim=96):
         super(ConditionalEncDecMHA, self).__init__()
+        self.text_embedding_dim = text_embedding_dim
+        self.lstm_hidden_size = lstm_embedding_dim
         self.time_dimension = time_dimension
-        self.bilstm = nn.LSTM(9, 96, bidirectional=True, batch_first=True)
-        self.linear = nn.Linear(288, 9)
-        self.mha = nn.MultiheadAttention(288, 8)
+        self.bilstm = nn.LSTM(9, self.lstm_hidden_size, bidirectional=True, batch_first=True)
+        self.linear_size = (self.lstm_hidden_size*2) + self.time_dimension + self.text_embedding_dim
+        self.linear = nn.Linear(self.linear_size, 9)
+        self.mha = nn.MultiheadAttention(self.linear_size, 8)
         self.device = device
 
     def pos_encoding(self, t):

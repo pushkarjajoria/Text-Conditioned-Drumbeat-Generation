@@ -1,7 +1,7 @@
 # Hyperparameters and configurations for BeatBrewer project
 
 # Training hyperparameters
-epochs: 20
+epochs: 100
 batch_size: 64
 lr: 0.0003
 time_embedding_dimension: 32
@@ -9,9 +9,9 @@ time_embedding_dimension: 32
 # Paths for datasets, models, and results
 dataset_dir: "datasets/Groove_Monkee_Mega_Pack_GM"
 clamp_model_path: "unsupervised_pretraining/trained_models/0128_2330/model_final.pth"
-checkpoint_dir: "../checkpoint/YourModelName"
-model_dir: "../models/YourModelName"
-results_dir: "../results/YourModelName"
+checkpoint_dir: "DDPM/checkpoint/conditional_ddpm"
+model_dir: "DDPM/trained_models/conditional_ddpm"
+results_dir: "DDPM/results"
 
 # Early stopping parameters
 early_stopping_patience: 10

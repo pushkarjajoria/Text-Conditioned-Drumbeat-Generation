@@ -1,4 +1,6 @@
 import os
+from datetime import datetime
+
 import torch
 from torch import optim
 from torch.utils.data import DataLoader
@@ -22,6 +24,8 @@ def load_config(config_path):
 
 
 def train(config):
+    date_time_str = datetime.now().strftime("%m-%d %H:%M")
+    run_name = f"Conditional DDPM {date_time_str}"
     device = "cuda" if torch.cuda.is_available() else "cpu"
     wandb.init(project='BeatBrewer', config=config)
 
@@ -31,11 +35,12 @@ def train(config):
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
 
     # Initialize models and optimizer
-    clamp_model = CLAMP()
-    clamp_model.load_state_dict(torch.load(config['clamp_model_path'], map_location=torch.device('cpu')))
+    clamp_model = CLAMP().to(device)
+    clamp_model.load_state_dict(torch.load(config['clamp_model_path']))
     clamp_model.eval()
+    print("Loaded the pretrained model successfully")
 
-    model = ConditionalEncDecMHA(config['time_embedding_dimension'], clamp_model.latent_dimension).to(device)
+    model = ConditionalEncDecMHA(config['time_embedding_dimension'], clamp_model.latent_dimension, device).to(device)
 
     optimizer = optim.AdamW(model.parameters(), lr=config['lr'])
     mse = nn.MSELoss()
@@ -72,12 +77,13 @@ def train(config):
             print("Early stopping")
             break
         if (epoch + 1) % 5 == 0:
-            save_checkpoint(model, "", epoch,  wandb, save_type="checkpoint", dir="DDPM")
+            print(f"Saving the model and sampling drum beats after {epoch} epoch")
+            save_checkpoint(model, run_name, epoch,  wandb, save_type="checkpoint", dir="DDPM")
+            # sampled_beats = diffusion.sample(model, n=5).numpy().squeeze()
+            # save_midi(sampled_beats, config['results_dir'], epoch)
 
     # Final model saving and sample generation
-    torch.save(model.state_dict(), os.path.join(config['model_dir'], 'model_final.pth'))
-    sampled_beats = diffusion.sample(model, n=5).numpy().squeeze()
-    save_midi(sampled_beats, config['results_dir'])
+    save_checkpoint(model, run_name, None, wandb, save_type="trained_models", dir="DDPM")
 
 
 if __name__ == "__main__":
