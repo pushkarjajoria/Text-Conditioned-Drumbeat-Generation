@@ -140,11 +140,11 @@ class CLAMP(nn.Module):  # Contrastive LAnguage Music Pretraining
 
         # Define projection heads for text and midi
         bert_embedding_dim = config['TextEncoder']['bert_embedding_dim']
-        latent_dimension = config['ProjectionHead']['projection_dim']
+        self.latent_dimension = config['ProjectionHead']['projection_dim']
         midi_embedding_dim = config['MidiEncoder']['midi_embedding_dim']
         dropout = config['ProjectionHead']['dropout']
-        self.text_projection_head = ProjectionHead(bert_embedding_dim, latent_dimension, dropout=dropout)
-        self.midi_projection_head = ProjectionHead(midi_embedding_dim, latent_dimension, dropout=dropout)
+        self.text_projection_head = ProjectionHead(bert_embedding_dim, self.latent_dimension, dropout=dropout)
+        self.midi_projection_head = ProjectionHead(midi_embedding_dim, self.latent_dimension, dropout=dropout)
         temperature_value = float(config['Training']['temperature'])  # Ensure it's a float
         self.temperature = nn.Parameter(torch.tensor([temperature_value])).to(self.device)
         self.text_encoder.to(self.device)

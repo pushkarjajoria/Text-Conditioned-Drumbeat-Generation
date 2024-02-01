@@ -5,7 +5,7 @@ from enum import Enum
 import torch
 from tqdm import tqdm
 
-from model import EncoderDecoderBN
+from DDPM.model import EncoderDecoderBN
 from utils.utils import save_midi
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s", level=logging.INFO, datefmt="%I:%M:%S")

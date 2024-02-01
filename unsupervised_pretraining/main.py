@@ -24,8 +24,8 @@ WEIGHT_DECAY = config['Training']['weight_decay']
 CHECKPOINT_INTERVAL = config['Training']['checkpoint_interval']
 
 
-def save_checkpoint(model, run_name, epoch, wandb, save_type="checkpoint"):
-    path = os.path.join("unsupervised_pretraining", save_type, run_name)
+def save_checkpoint(model, run_name, epoch, wandb, save_type="checkpoint", dir="unsupervised_pretraining"):
+    path = os.path.join(dir, save_type, run_name)
     os.makedirs(path, exist_ok=True)
     filename = f'model_epoch_{epoch}.pth' if epoch \
         else 'model_final.pth'
@@ -80,7 +80,8 @@ if __name__ == "__main__":
     print(f"DataLoader initialized with {len(train_loader)} batches per epoch")
 
     # Initialize model, optimizer, and learning rate scheduler
-    model = CLAMP()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = CLAMP().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     scheduler = StepLR(optimizer, step_size=20, gamma=0.3)
     print("Model, optimizer, and scheduler initialized")
