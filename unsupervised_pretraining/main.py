@@ -81,6 +81,7 @@ if __name__ == "__main__":
 
     # Initialize model, optimizer, and learning rate scheduler
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Running on {device}")
     model = CLAMP().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     scheduler = StepLR(optimizer, step_size=20, gamma=0.3)

@@ -45,6 +45,9 @@ class MidiEncoder(nn.Module):
         x = x.float()
         # Reshape the piano roll
         # x = self.reshape(x)
+        # If there no batch dim, add a batch dimension.
+        if len(x.shape) == 2:
+            x = x.unsqueeze(0)
         x = x.permute(2, 0, 1)  # Shape needed for transformer: [seq_len, batch, embedding_dim]
 
         # Pass through transformer layers
@@ -204,6 +207,18 @@ class CLAMP(nn.Module):  # Contrastive LAnguage Music Pretraining
     def get_text_embeddings(self, texts):
         with torch.no_grad():
             return self.text_projection_head(self.text_encoder(texts))
+
+    def get_text_and_bert_embeddings(self, texts):
+        with torch.no_grad():
+            bert_embeddings = self.text_encoder(texts)
+            return self.text_projection_head(bert_embeddings), bert_embeddings
+
+    def get_midi_embeddings(self, piano_rolls):
+        with torch.no_grad():
+            midi_embeddings = self.midi_encoder(piano_rolls)
+            midi_projected = self.midi_projection_head(midi_embeddings)
+            return midi_projected
+
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ class MidiDataset(Dataset):
             try:
                 # Convert MIDI to NumPy array and then to PyTorch tensor at load time
                 numpy_data = midi2numpy(read_midi(file_path))
-                if numpy_data.shape[0] != 9 or numpy_data.shape[1] != 64:
+                if numpy_data.shape[0] != 9 or numpy_data.shape[1] != 128:
                     # For now, we are only working with 9 instruments in the midi file and 64 timeslices. The plan is to
                     # include other time signatures in the training aswell.
                     continue
@@ -63,7 +63,7 @@ def get_top_tags(file_tag_map, top_n):
 def get_filenames_and_tags(dataset_dir='../../datasets/Groove_Monkee_Mega_Pack_GM', filter_common_tags=True):
     # Dictionary to store file paths and tags
     file_tag_map = {}
-    filter_list = ["..", "datasets", "Groove_Monkee_Mega_Pack_GM", "GM", "Bonus"]
+    filter_list = ["..", "datasets", "Groove_Monkee_Mega_Pack_GM", "GM", "Bonus", "Twisted", "Variety"]
     # Walk through directory
     for dir_name, subdir_list, file_list in os.walk(dataset_dir):
         for fname in fnmatch.filter(file_list, '*.mid'):
@@ -82,7 +82,7 @@ def get_filenames_and_tags(dataset_dir='../../datasets/Groove_Monkee_Mega_Pack_G
 
 
 if __name__ == "__main__":
-    file_name_and_tags = get_filenames_and_tags()
+    file_name_and_tags = get_filenames_and_tags(dataset_dir="../datasets/Groove_Monkee_Mega_Pack_GM")
     dataset = {}  # Dictionary to store NumPy arrays along with their tags
     timeslices = []  # List to store the first dimensions for the histogram
     second_dimensions = set()  # Set to store unique second dimensions
@@ -94,17 +94,17 @@ if __name__ == "__main__":
             timeslices.append(num_timeslices)
             if num_timeslices not in second_dimensions:
                 print(f"{num_timeslices} -> {midi_path}")
-            second_dimensions.add(num_timeslices)
+                second_dimensions.add(num_timeslices)
             dataset[midi_path] = {'tags': midi_tags, 'data': np_drum_track, 'timeslices': num_timeslices}
         except Exception as e:
             print(f"Error processing file {midi_path}: {str(e)}")
             continue
 
-    # Save the dataset as a pickle file
-    pickle_file = "../../datasets/midi_dataset.pkl"
-    with open(pickle_file, "wb") as f:
-        pickle.dump(dataset, f)
-    print(f"Dataset saved to {pickle_file}")
+    # # Save the dataset as a pickle file
+    # pickle_file = "../../datasets/midi_dataset.pkl"
+    # with open(pickle_file, "wb") as f:
+    #     pickle.dump(dataset, f)
+    # print(f"Dataset saved to {pickle_file}")
 
     # Plot a histogram of the first dimensions of the NumPy arrays
     timeslice_counter = collections.Counter(timeslices)

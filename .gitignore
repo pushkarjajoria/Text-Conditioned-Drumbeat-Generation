@@ -11,6 +11,11 @@ unsupervised_pretraining/wandb
 
 */trained_models
 */checkpoint
+DDPM/noising_test
+DDPM/reconstruction
+DDPM/results
+unsupervised_pretraining/plots/
+unsupervised_pretraining/text_embeddings_mapping.pkl
 /wandb
 # Byte-compiled / optimized / DLL files
 __pycache__/

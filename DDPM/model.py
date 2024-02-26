@@ -68,14 +68,17 @@ class ConditionalEncDecMHA(nn.Module):
 
     def forward(self, X, t, text_embedding):
         # Encode t using provided function pos_encoding and reshape
-        X = X.squeeze().permute(0, 2, 1)  # Batch x 64(seq_len) x 9(features/instruments)
+        if len(X.shape) > 3:
+            X = X.squeeze().permute(0, 2, 1)  # Batch x 64(seq_len) x 9(features/instruments)
+        else:
+            X = X.permute(0, 2, 1)
         encoded_time = self.pos_encoding(t)
 
         # Transform X using bilstm and concatenate with encoded_time
         h, _ = self.bilstm(X)
         time_text_context = torch.cat([encoded_time, text_embedding], dim=-1)
         # Change the shape from batch x features to batch x seq_len x features
-        time_text_context = time_text_context[:, None, :].expand(-1, 64, -1)
+        time_text_context = time_text_context[:, None, :].expand(-1, 128, -1)
         # Also need to concat the text embeddings here
         mha_input = torch.cat([h, time_text_context], dim=-1)
         # Use this as the input to the MHA

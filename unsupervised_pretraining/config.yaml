@@ -1,5 +1,5 @@
 MidiEncoder:
-  number_timeslices: 64
+  number_timeslices: 128
   number_instruments: 9
   midi_embedding_dim: 9
   dropout: 0.1

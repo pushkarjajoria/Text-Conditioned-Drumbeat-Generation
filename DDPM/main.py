@@ -1,4 +1,6 @@
 import os
+import pickle
+import random
 from datetime import datetime
 
 import torch
@@ -23,6 +25,27 @@ def load_config(config_path):
     return config
 
 
+# Function to check for a pickled dataset and load it
+def load_or_process_dataset(dataset_dir):
+    pickle_file_path = os.path.join(dataset_dir, 'processed_midi_dataset.pkl')
+
+    # Check if the pickled dataset exists
+    if os.path.exists(pickle_file_path):
+        print("Loading dataset from pickle file.")
+        with open(pickle_file_path, 'rb') as f:
+            midi_dataset = pickle.load(f)  # Load the entire MidiDataset object
+    else:
+        print("Processing dataset from scratch.")
+        file_name_and_tags = get_filenames_and_tags(dataset_dir=dataset_dir, filter_common_tags=True)
+        midi_dataset = MidiDataset(file_name_and_tags)  # Initialize the MidiDataset with file_name_and_tags
+
+        # Saving the processed MidiDataset to a pickle file for future use
+        with open(pickle_file_path, 'wb') as f:
+            pickle.dump(midi_dataset, f)  # Pickle the entire MidiDataset object
+            print(f"Dataset saved to {pickle_file_path}")
+
+    return midi_dataset
+
 def train(config):
     date_time_str = datetime.now().strftime("%m-%d %H:%M")
     run_name = f"Conditional DDPM {date_time_str}"
@@ -30,9 +53,9 @@ def train(config):
     wandb.init(project='BeatBrewer', config=config)
 
     # Initialize dataset and dataloader
-    file_name_and_tags = get_filenames_and_tags(dataset_dir=config['dataset_dir'], filter_common_tags=True)
-    train_dataset = MidiDataset(file_name_and_tags)
+    train_dataset = load_or_process_dataset(dataset_dir=config['dataset_dir'])
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
+    print(f"Len of dataset: {len(train_dataset)}")
 
     # Initialize models and optimizer
     clamp_model = CLAMP().to(device)
@@ -86,8 +109,54 @@ def train(config):
     save_checkpoint(model, run_name, None, wandb, save_type="trained_models", dir="DDPM")
 
 
+def generate(config):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    diffusion = Diffusion(num_time_slices=128)
+
+    # Initialize models and optimizer
+    clamp_model = CLAMP().to(device)
+    clamp_model.load_state_dict(torch.load(config['clamp_model_path']))
+    clamp_model.eval()
+    print("Loaded the pretrained CLAMP model successfully")
+
+    model = ConditionalEncDecMHA(config['time_embedding_dimension'], clamp_model.latent_dimension, device).to(device)
+    model.load_state_dict(torch.load(config['ddpm_model_path']))
+    model.eval()
+
+    text = ["Punk 200 Tom Groove Tom Groove F6", "Punk 200 Tom Groove Tom Groove F6 2"]
+    # file_name_and_tags = get_filenames_and_tags(dataset_dir=config['dataset_dir'], filter_common_tags=True)
+    # text_from_dataset = random.choices(list(file_name_and_tags.values()), k=5)
+    text_prompts = text
+    text_embeddings = clamp_model.get_text_embeddings(text_prompts)
+    sampled_beats = diffusion.sample_conditional(model, n=len(text_prompts), text_embeddings=text_embeddings).numpy().squeeze()
+    file_names = text_prompts
+    save_midi(sampled_beats, config['results_dir'], file_names=file_names)
+    print("Done")
+
+
+def reconstruct_dataset_midi(config):
+    # Initialize dataset and dataloader
+    train_dataset = load_or_process_dataset(dataset_dir=config['dataset_dir'])
+    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+    counter = 0
+    for drum_beats, text_data in tqdm(train_loader):
+        rand_number = random.random()
+        if rand_number <= 0.1:
+            counter += 1
+            drum_beats = (drum_beats * 127).type(torch.uint8)
+            save_midi(drum_beats, config['reconstruct_dir'], file_names=text_data)
+        if counter >= 10:
+            break
+
+
 if __name__ == "__main__":
     config_path = 'DDPM/config.yaml'
     config = load_config(config_path)
-    train(config)
+    # train(config)
+    generate(config)
+    # reconstruct_dataset_midi(config)
+
+
+
+
 
