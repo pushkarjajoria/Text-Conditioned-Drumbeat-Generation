@@ -50,7 +50,7 @@ model = EncoderDecoder("Midi_Encoder/config.yaml").to(device)
 criterion = torch.nn.MSELoss()  # If you're still using MSE for any reason
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
-early_stopping = EarlyStopping(patience=10, min_delta=0.001)
+early_stopping = EarlyStopping(patience=10, min_delta=0)
 
 # Training loop
 epochs = 200

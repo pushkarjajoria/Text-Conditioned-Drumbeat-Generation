@@ -156,7 +156,6 @@ class CLAMP(nn.Module):  # Contrastive LAnguage Music Pretraining
         self.midi_projection_head.to(self.device)
 
     def forward(self, piano_rolls, texts):
-        piano_rolls = piano_rolls.to(self.device)
         """
         :param texts: A list of text inputs
         :param piano_rolls: A batch of numpy piano rolls

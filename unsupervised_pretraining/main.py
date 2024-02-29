@@ -108,6 +108,7 @@ if __name__ == "__main__":
     for epoch in range(EPOCHS):
         epoch_loss = 0.0
         for midi_data, text_data in tqdm(train_loader):
+            midi_data = midi_data.to(device)
             text_embeddings, midi_embeddings = model(midi_data, text_data)
             loss = model.contrastive_loss(text_embeddings, midi_embeddings).to(device)
             optimizer.zero_grad()
