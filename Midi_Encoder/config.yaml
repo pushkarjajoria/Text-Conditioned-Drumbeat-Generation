@@ -1,0 +1,31 @@
+encoder:
+  input_size: 9
+  hidden_size: 8
+  num_layers: 2
+  dropout: 0.2  # Optional dropout rate
+
+decoder:
+  output_size: 9
+  hidden_size: 32
+  num_layers: 2
+  dropout: 0.2  # Optional dropout rate
+
+training:
+  embedding_dim_size: 128
+  learning_rate: 0.001
+  batch_size: 32
+  num_epochs: 100
+  optimizer: adam  # Options: adam, sgd, rmsprop, etc.
+  loss_function: mse_loss  # Choose appropriate loss function based on task
+  shuffle: true  # Whether to shuffle the training data
+  device: cuda  # Choose 'cuda' for GPU training or 'cpu' for CPU training
+
+scheduler:
+  use_scheduler: true  # Whether to use learning rate scheduler
+  scheduler_type: step_lr  # Options: step_lr, plateau, cosine_annealing, etc.
+  step_size: 10  # Number of epochs before reducing learning rate
+  gamma: 0.1  # Factor by which the learning rate will be reduced
+
+logging:
+  log_interval: 10  # Log training statistics every 'log_interval' batches
+  save_model_path: models/  # Directory to save trained models

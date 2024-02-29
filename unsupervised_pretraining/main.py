@@ -1,6 +1,8 @@
 import os
+import random
 from datetime import datetime
 
+import numpy as np
 import torch
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
@@ -85,6 +87,17 @@ if __name__ == "__main__":
     model = CLAMP().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     scheduler = StepLR(optimizer, step_size=20, gamma=0.3)
+
+    # Set the seed for PyTorch
+    torch.manual_seed(42)
+    # Set the seed for Python's random module
+    random.seed(42)
+    # Set the seed for NumPy
+    np.random.seed(42)
+    # If you're using GPU, you also need to set the seed for CUDA operations
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(42)
+    
     print("Model, optimizer, and scheduler initialized")
 
     # Early stopping
@@ -96,7 +109,7 @@ if __name__ == "__main__":
         epoch_loss = 0.0
         for midi_data, text_data in tqdm(train_loader):
             text_embeddings, midi_embeddings = model(midi_data, text_data)
-            loss = model.contrastive_loss(text_embeddings, midi_embeddings)
+            loss = model.contrastive_loss(text_embeddings, midi_embeddings).to(device)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
