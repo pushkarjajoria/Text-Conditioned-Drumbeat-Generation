@@ -65,7 +65,10 @@ def train(config):
 
     # Initialize models and optimizer
     clamp_model = CLAMP().to(device)
-    clamp_model.load_state_dict(torch.load(config['clamp_model_path']))
+    if torch.cuda.is_available():
+        clamp_model.load_state_dict(torch.load(config['clamp_model_path'], map_location=torch.device('cuda')))
+    else:
+        clamp_model.load_state_dict(torch.load(config['clamp_model_path'], map_location=torch.device('cpu')))
     clamp_model.eval()
     print("Loaded the pretrained model successfully")
 
