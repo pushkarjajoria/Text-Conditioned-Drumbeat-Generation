@@ -3,14 +3,16 @@ import pickle
 import random
 from datetime import datetime
 
+import numpy as np
 import torch
 from torch import optim
 from torch.utils.data import DataLoader
 import wandb
 import yaml
 from tqdm import tqdm
-from DDPM.ddpm import Diffusion
-from DDPM.model import ConditionalEncDecMHA
+from DDPM.latent_diffusion import LatentDiffusion
+from DDPM.model import ConditionalLatentEncDecMHA, ConditionalUNet
+from Midi_Encoder.model import EncoderDecoder
 from unsupervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags, MidiDataset
 from unsupervised_pretraining.model import CLAMP
 from unsupervised_pretraining.main import EarlyStopping, save_checkpoint
@@ -48,8 +50,11 @@ def load_or_process_dataset(dataset_dir):
 
 
 def train(config):
+    torch.manual_seed(42)
+    np.random.seed(42)
+
     date_time_str = datetime.now().strftime("%m-%d %H:%M")
-    run_name = f"Conditional DDPM {date_time_str}"
+    run_name = f"Latent conditional DDPM {date_time_str}"
     device = "cuda" if torch.cuda.is_available() else "cpu"
     wandb.init(project='BeatBrewer', config=config)
 
@@ -64,12 +69,22 @@ def train(config):
     clamp_model.eval()
     print("Loaded the pretrained model successfully")
 
-    model = ConditionalEncDecMHA(config['time_embedding_dimension'], clamp_model.latent_dimension, device).to(device)
+    model = ConditionalUNet(config['z_dimension'], clamp_model.latent_dimension, config['time_embedding_dimension']).to(device)
 
     optimizer = optim.AdamW(model.parameters(), lr=config['lr'])
-    mse = nn.MSELoss()
-    diffusion = Diffusion()
+    mse = nn.MSELoss().to(device)
+    diffusion = LatentDiffusion()
     early_stopping = EarlyStopping(patience=10)
+
+    autoencoder_config_path = "Midi_Encoder/config.yaml"
+    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run/final_model.pt"
+    midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
+    if torch.cuda.is_available():
+        midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
+    else:
+        midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path, map_location=torch.device('cpu')))
+
+    print("Loaded encoder decoder model successfully.")
 
     # Training loop
     for epoch in range(config['epochs']):
@@ -77,12 +92,13 @@ def train(config):
         for drum_beats, text_data in tqdm(train_loader, desc=f"Epoch {epoch}"):
             text_embeddings = clamp_model.get_text_embeddings(text_data)
             drum_beats = drum_beats.to(device)
-            t = diffusion.sample_timesteps(drum_beats.shape[0]).to(device)
-            x_t, noise = diffusion.noise_drum_beats(drum_beats, t)
-            predicted_noise = model(x_t, t, text_embeddings)
+            drum_beat_latent_code = midi_encoder_decoder.encoder(drum_beats.permute(0, 2, 1))
+            t = diffusion.sample_timesteps(drum_beat_latent_code.shape[0]).to(device)
+            z_t, noise = diffusion.noise_z(drum_beat_latent_code, t)
+            predicted_noise = model(z_t, t, text_embeddings)
 
             noise = noise.squeeze()
-            predicted_noise = predicted_noise.permute(0, 2, 1)
+            predicted_noise = predicted_noise
             loss = mse(noise, predicted_noise)
 
             optimizer.zero_grad()
@@ -112,7 +128,7 @@ def train(config):
 
 def generate(config):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    diffusion = Diffusion(num_time_slices=128)
+    diffusion = LatentDiffusion()
 
     # Initialize models and optimizer
     clamp_model = CLAMP().to(device)
@@ -120,7 +136,7 @@ def generate(config):
     clamp_model.eval()
     print("Loaded the pretrained CLAMP model successfully")
 
-    model = ConditionalEncDecMHA(config['time_embedding_dimension'], clamp_model.latent_dimension, device).to(device)
+    model = ConditionalLatentEncDecMHA(config['time_embedding_dimension'], clamp_model.latent_dimension, device).to(device)
     model.load_state_dict(torch.load(config['ddpm_model_path']))
     model.eval()
 
@@ -153,8 +169,8 @@ def reconstruct_dataset_midi(config):
 if __name__ == "__main__":
     config_path = 'DDPM/config.yaml'
     config = load_config(config_path)
-    # train(config)
-    generate(config)
+    train(config)
+    # generate(config)
     # reconstruct_dataset_midi(config)
 
 

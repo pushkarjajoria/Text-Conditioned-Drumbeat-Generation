@@ -5,6 +5,7 @@ epochs: 150
 batch_size: 64
 lr: 0.0003
 time_embedding_dimension: 32
+z_dimension: 128
 
 # Paths for datasets, models, and results
 dataset_dir: "datasets/Groove_Monkee_Mega_Pack_GM"

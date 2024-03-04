@@ -94,6 +94,108 @@ class ConditionalEncDecMHA(nn.Module):
         return out
 
 
+class ConditionalUNet(nn.Module):
+    def __init__(self, z_dim=128, text_embedding_dim=64, time_dim=1, hidden_dim=256):
+        super(ConditionalUNet, self).__init__()
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.z_dim = z_dim
+        self.text_embedding_dim = text_embedding_dim
+        self.time_dim = time_dim
+        self.hidden_dim = hidden_dim
+
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(z_dim + text_embedding_dim + self.time_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+        )
+
+        # Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(hidden_dim // 2, hidden_dim),  # 128 -> 256
+            nn.ReLU(),
+            nn.Linear(hidden_dim, z_dim),  # Predicting epsilon of the same dimension as Z (256 -> 128)
+        )
+
+    def pos_encoding(self, t):
+        channels = self.time_dim
+        inv_freq = 1.0 / (
+                10000
+                ** (torch.arange(0, channels, 2, device=self.device).float() / channels)
+        )
+        pos_enc_a = torch.sin(t.unsqueeze(1) * inv_freq.unsqueeze(0))
+        pos_enc_b = torch.cos(t.unsqueeze(1) * inv_freq.unsqueeze(0))
+        pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
+        return pos_enc
+
+    def forward(self, z, t, text_embedding):
+        # Embed time
+        t_encoded = self.pos_encoding(t)
+
+        # Concatenate z, text_embedding, and t_emb
+        combined_input = torch.cat([z, text_embedding, t_encoded], dim=-1)
+
+        # Encode
+        encoded = self.encoder(combined_input)  # (batch, 128) output
+
+        # Decode
+        epsilon = self.decoder(encoded)  # (batch, 128) -> (batch, 256) -> (batch, 128)
+
+        return epsilon
+
+
+class ConditionalLatentEncDecMHA(nn.Module):
+    def __init__(self, time_dimension, text_embedding_dim, device, lstm_embedding_dim=96):
+        super(ConditionalLatentEncDecMHA, self).__init__()
+        self.text_embedding_dim = text_embedding_dim
+        self.lstm_hidden_size = lstm_embedding_dim
+        self.time_dimension = time_dimension
+        self.bilstm = nn.LSTM(9, self.lstm_hidden_size, bidirectional=True, batch_first=True)
+        self.linear_size = (self.lstm_hidden_size*2) + self.time_dimension + self.text_embedding_dim
+        self.linear = nn.Linear(self.linear_size, 9)
+        self.mha = nn.MultiheadAttention(self.linear_size, 8)
+        self.device = device
+
+    def pos_encoding(self, t):
+        channels = self.time_dimension
+        inv_freq = 1.0 / (
+                10000
+                ** (torch.arange(0, channels, 2, device=self.device).float() / channels)
+        )
+        pos_enc_a = torch.sin(t.unsqueeze(1) * inv_freq.unsqueeze(0))
+        pos_enc_b = torch.cos(t.unsqueeze(1) * inv_freq.unsqueeze(0))
+        pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
+        return pos_enc
+
+    def forward(self, X, t, text_embedding):
+        # Encode t using provided function pos_encoding and reshape
+        if len(X.shape) > 3:
+            X = X.squeeze().permute(0, 2, 1)  # Batch x 64(seq_len) x 9(features/instruments)
+        else:
+            X = X.permute(0, 2, 1)
+        encoded_time = self.pos_encoding(t)
+
+        # Transform X using bilstm and concatenate with encoded_time
+        h, _ = self.bilstm(X)
+        time_text_context = torch.cat([encoded_time, text_embedding], dim=-1)
+        # Change the shape from batch x features to batch x seq_len x features
+        time_text_context = time_text_context[:, None, :].expand(-1, 128, -1)
+        # Also need to concat the text embeddings here
+        mha_input = torch.cat([h, time_text_context], dim=-1)
+        # Use this as the input to the MHA
+
+        # Pass concatenated tensor through MultiheadAttention
+        mha_input = mha_input.permute(1, 0, 2)
+        h2, _ = self.mha(mha_input, mha_input, mha_input)
+        h2 = h2.permute(1, 0, 2)
+
+        # Decode using linear layer
+        out = self.linear(h2)
+
+        return out
+
+
 class ConvBNGELU(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, padding=0, stride=1, dilation=1,
                  groups=1, eps=1e-5, momentum=0.1):
@@ -233,14 +335,9 @@ class EncoderDecoderBN(nn.Module):
 
 
 if __name__ == '__main__':
-    net = EncoderDecoderBN()
-    # net = UNetConditional(num_classes=10, device="cpu")
-    num_model_params = (sum([p.numel() for p in net.parameters()]))
-    print(f"Number of model parameters = {num_model_params}")
-    x = torch.randn(5, 3, 64, 64) # b x c x w x h
-    t = x.new_tensor([10] * x.shape[0]).long()
-    y = net(x, t)
-    print(y)
-    print(x.shape)
-    print(t.detach().numpy())
-    print(net(x, t).shape)
+    net = ConditionalUNet()
+    z_t = torch.rand((32, 128))
+    t = torch.randint(1, 999, (32, ))
+    text_emb = torch.rand((32, 64))
+    noise = net(z_t, t, text_emb)
+    print("Done")

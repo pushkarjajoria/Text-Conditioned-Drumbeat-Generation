@@ -105,6 +105,13 @@ class EncoderDecoder(nn.Module):
         # Add reconstruction loss if needed
         return decoded_midi, z
 
+    def decode_midi(self, z):
+        return self.decoder(z)
+
+    def encode(self, pianoroll):
+        pianoroll = pianoroll.permute(0, 2, 1)
+        return self.encoder(pianoroll)
+
 
 if __name__ == "__main__":
     train_dataset = load_or_process_dataset(dataset_dir="datasets/Groove_Monkee_Mega_Pack_GM")

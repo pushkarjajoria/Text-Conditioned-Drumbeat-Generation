@@ -8,6 +8,8 @@
 /models
 /test_noise
 unsupervised_pretraining/wandb
+Midi_Encoder/reconstruction/
+Midi_Encoder/runs/
 
 */trained_models
 */checkpoint
