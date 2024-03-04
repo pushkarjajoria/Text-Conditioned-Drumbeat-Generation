@@ -15,4 +15,4 @@ export WANDB_MODE=offline
 echo "Weights and bias env variable = $WANDB_MODE"
 
 # Run the training script
-python -m DDPM.main
+python -m DDPM.main_latent_space
