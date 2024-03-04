@@ -73,6 +73,12 @@ def train(config):
     print("Loaded the pretrained model successfully")
 
     model = ConditionalUNet(config['z_dimension'], clamp_model.latent_dimension, config['time_embedding_dimension']).to(device)
+    model_state_path = "/ichec/home/users/pushkarj/Git/BeatBrewer/DDPM/checkpoint/Latent conditional DDPM 03-04 14:53/model_epoch_29.pth"
+    if torch.cuda.is_available():
+        model.load_state_dict(torch.load(model_state_path))
+    else:
+        model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
+    print("Loaded the ConditionalUNet model successfully")
 
     optimizer = optim.AdamW(model.parameters(), lr=config['lr'])
     mse = nn.MSELoss().to(device)
@@ -90,7 +96,7 @@ def train(config):
     print("Loaded encoder decoder model successfully.")
 
     # Training loop
-    for epoch in range(config['epochs']):
+    for epoch in range(30, config['epochs']):
         epoch_loss = 0
         for drum_beats, text_data in tqdm(train_loader, desc=f"Epoch {epoch}"):
             text_embeddings = clamp_model.get_text_embeddings(text_data)
