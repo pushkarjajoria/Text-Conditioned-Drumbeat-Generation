@@ -8,7 +8,7 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate ddpm
 
 # Load necessary modules
-module load cuda/11.4
+#module load cuda/11.4
 
 # Set wandb to offline mode
 export WANDB_MODE=offline
