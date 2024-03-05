@@ -31,9 +31,9 @@ original_dir.mkdir(parents=True, exist_ok=True)
 reconstr_dir.mkdir(parents=True, exist_ok=True)
 
 # Process and save MIDI batches
+p = 0
 for midi_batch, tags in train_loader:
     reconstructionS, z = model(midi_batch)
-
     for i, (midi, reconstruction) in enumerate(zip(midi_batch, reconstructionS)):
         midi = (midi * 127).type(torch.uint8)
         reconstruction = (reconstruction * 127).type(torch.uint8)
@@ -45,3 +45,6 @@ for midi_batch, tags in train_loader:
         # Save the reconstructed MIDI file
         reconstruction = reconstruction.permute((1, 0)).numpy()
         save_numpy_as_midi(os.path.join(reconstr_dir, f"{tags[i]}.mid"), reconstruction, ghost_threshold=5)
+    p += 1
+    if p >= 5:
+        break
