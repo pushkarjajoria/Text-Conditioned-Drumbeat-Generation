@@ -13,7 +13,7 @@ class LatentDiffusion:
     This class, just like the Diffusion class, handles the diffusion but only in the latent space.
     The input z is expected to be a vector and not a matrix/2D-Tensor (As is the case with images).
     """
-    def __init__(self, noise_steps=1000, beta_start=1e-4, beta_end=0.02, latent_dimension=128, schedule: BetaSchedule = BetaSchedule.QUADRATIC):
+    def __init__(self, noise_steps=1000, beta_start=1e-4, beta_end=0.02, latent_dimension=128, schedule: BetaSchedule = BetaSchedule.COSINE):
         self.latent_dimension = latent_dimension
         self.noise_steps = noise_steps
         self.beta_start = beta_start
@@ -70,17 +70,16 @@ class LatentDiffusion:
             for i in tqdm(reversed(range(1, noised_steps)), position=0):
                 t = (torch.ones(batch_len) * i).long().to(self.device)
                 predicted_noise = model(z, t, text_embeddings).permute(0, 2, 1)
-                alpha = self.alpha[t][:, None, None]
-                alpha_hat = self.alpha_hat[t][:, None, None]
-                beta = self.beta[t][:, None, None]
+                alpha = self.alpha[t][:, None]
+                alpha_hat = self.alpha_hat[t][:, None]
+                beta = self.beta[t][:, None]
                 if i > 1:
                     noise = torch.randn_like(z)
                 else:
                     noise = torch.zeros_like(z)
-                # x_t-1|(x_t, t)
-                z = 1 / torch.sqrt(alpha) * (
-                        z - ((1 - alpha) / (torch.sqrt(1 - alpha_hat))) * predicted_noise) + torch.sqrt(
-                    beta) * noise
+                # x_t-1|(x_t, t) # Verified, this eq is mathematically correct!
+                z = (1 / torch.sqrt(alpha)) * (
+                        z - (beta / (torch.sqrt(1 - alpha_hat))) * predicted_noise) + torch.sqrt(beta) * noise
         model.train()
         return z
 
@@ -108,7 +107,8 @@ class LatentDiffusion:
                     beta) * noise
         denoising_model.train()
         midi_decoder.eval()
-        decoded_midi = midi_decoder.decode_midi(z)
+        z_raw = torch.atanh(z)
+        decoded_midi = midi_decoder.decode_midi(z_raw)
         decoded_midi = decoded_midi.clamp(0, 1)
         decoded_midi = (decoded_midi * 127).type(torch.uint8)
         midi_decoder.train()

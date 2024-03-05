@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn import MultiheadAttention
 
 
 class UnconditionalEncDecMHA(nn.Module):
@@ -95,7 +96,7 @@ class ConditionalEncDecMHA(nn.Module):
 
 
 class ConditionalUNet(nn.Module):
-    def __init__(self, z_dim=128, text_embedding_dim=64, time_dim=1, hidden_dim=256):
+    def __init__(self, z_dim=64, text_embedding_dim=64, time_dim=1, hidden_dim=256):
         super(ConditionalUNet, self).__init__()
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.z_dim = z_dim
@@ -104,12 +105,19 @@ class ConditionalUNet(nn.Module):
         self.hidden_dim = hidden_dim
 
         # Encoder
-        self.encoder = nn.Sequential(
+        self.linear_encoder = nn.Sequential(
             nn.Linear(z_dim + text_embedding_dim + self.time_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
+            nn.ReLU()
         )
+        self.down1 = nn.Linear(hidden_dim, hidden_dim * 2)
+        self.sa1 = MultiheadAttention(hidden_dim * 2, num_heads=4)
+        # Bottom of U-Net, deepest layer
+        self.bot = nn.Linear(hidden_dim * 2, hidden_dim * 4)
+        # Simulate up-sampling
+        self.up1 = nn.Linear(hidden_dim * 4, (hidden_dim * 2) - (time_dim + text_embedding_dim))
+        self.sa2 = MultiheadAttention(hidden_dim * 2, num_heads=4)
+        # Output transformation to predict noise
+        self.outc = nn.Linear(hidden_dim * 2, z_dim)
 
         # Decoder
         self.decoder = nn.Sequential(
@@ -134,14 +142,23 @@ class ConditionalUNet(nn.Module):
         t_encoded = self.pos_encoding(t)
 
         # Concatenate z, text_embedding, and t_emb
-        combined_input = torch.cat([z, text_embedding, t_encoded], dim=-1)
+        combined_context = torch.cat([text_embedding, t_encoded], dim=-1)
+        combined_input = torch.cat([z, combined_context], dim=-1)
 
         # Encode
-        encoded = self.encoder(combined_input)  # (batch, 128) output
+        encoded_input = self.linear_encoder(combined_input)  # (batch, 128) output
+        z2 = self.down1(encoded_input)
+        z2, _ = self.sa1(z2, z2, z2)
+        # Bottom of U-Net, processing...
+        z_bot = self.bot(z2)
 
-        # Decode
-        epsilon = self.decoder(encoded)  # (batch, 128) -> (batch, 256) -> (batch, 128)
+        # Up-sampling with integration of timestep in each step if necessary
+        z_up1 = self.up1(z_bot)
+        z_up1_wt_context = torch.cat([z_up1, combined_context], dim=-1)
+        z_up1, _ = self.sa2(z_up1_wt_context, z_up1_wt_context, z_up1_wt_context)
+        # Continue with up-sampling...
 
+        epsilon = self.outc(z_up1)
         return epsilon
 
 

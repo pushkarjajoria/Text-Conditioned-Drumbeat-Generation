@@ -60,7 +60,6 @@ class Encoder(nn.Module):
         concatenated_features = torch.cat(features, dim=1)
         concatenated_features = concatenated_features.reshape(
             (batch_size, -1))  # Concatenate outputs from all resolutions
-        # Tanh activation to make sure the diffusion process works fine
         z = self.activation(self.linear(concatenated_features))
         z = self.batch_norm(z)
         z = self.dropout(z)

@@ -10,7 +10,7 @@
 unsupervised_pretraining/wandb
 Midi_Encoder/reconstruction/
 Midi_Encoder/runs/
-
+Midi_Encoder/runs 64/
 */trained_models
 */checkpoint
 DDPM/noising_test

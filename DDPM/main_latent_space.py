@@ -73,12 +73,12 @@ def train(config):
     print("Loaded the pretrained model successfully")
 
     model = ConditionalUNet(config['z_dimension'], clamp_model.latent_dimension, config['time_embedding_dimension']).to(device)
-    model_state_path = "/ichec/home/users/pushkarj/Git/BeatBrewer/DDPM/checkpoint/Latent conditional DDPM 03-04 14:53/model_epoch_29.pth"
-    if torch.cuda.is_available():
-        model.load_state_dict(torch.load(model_state_path))
-    else:
-        model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
-    print("Loaded the ConditionalUNet model successfully")
+    # model_state_path = "/ichec/home/users/pushkarj/Git/BeatBrewer/DDPM/checkpoint/Latent conditional DDPM 03-04 14:53/model_epoch_29.pth"
+    # if torch.cuda.is_available():
+    #     model.load_state_dict(torch.load(model_state_path))
+    # else:
+    #     model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
+    # print("Loaded the ConditionalUNet model successfully")
 
     optimizer = optim.AdamW(model.parameters(), lr=config['lr'])
     mse = nn.MSELoss().to(device)
@@ -86,7 +86,7 @@ def train(config):
     early_stopping = EarlyStopping(patience=10)
 
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run/final_model.pt"
+    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run_server/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
@@ -96,14 +96,15 @@ def train(config):
     print("Loaded encoder decoder model successfully.")
 
     # Training loop
-    for epoch in range(30, config['epochs']):
+    for epoch in range(config['epochs']):
         epoch_loss = 0
         for drum_beats, text_data in tqdm(train_loader, desc=f"Epoch {epoch}"):
             text_embeddings = clamp_model.get_text_embeddings(text_data)
             drum_beats = drum_beats.to(device)
             drum_beat_latent_code = midi_encoder_decoder.encoder(drum_beats.permute(0, 2, 1))
+            normalized_drum_beat_latent_code = nn.tanh(drum_beat_latent_code)
             t = diffusion.sample_timesteps(drum_beat_latent_code.shape[0]).to(device)
-            z_t, noise = diffusion.noise_z(drum_beat_latent_code, t)
+            z_t, noise = diffusion.noise_z(normalized_drum_beat_latent_code, t)
             predicted_noise = model(z_t, t, text_embeddings)
 
             noise = noise.squeeze()
@@ -153,11 +154,9 @@ def generate(config):
         model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
     model.eval()
     text = ["Rock Essentials 8th Rock Rock Basic", "Country song pop chorus"]
-    # file_name_and_tags = get_filenames_and_tags(dataset_dir=config['dataset_dir'], filter_common_tags=True)
-    # text_from_dataset = random.choices(list(file_name_and_tags.values()), k=5)
     text_prompts = text
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run/final_model.pt"
+    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run_server/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
@@ -193,8 +192,8 @@ def reconstruct_dataset_midi(config):
 if __name__ == "__main__":
     config_path = 'DDPM/config.yaml'
     config = load_config(config_path)
-    # train(config)
-    generate(config)
+    train(config)
+    # generate(config)
     # reconstruct_dataset_midi(config)
 
 
