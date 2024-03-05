@@ -49,7 +49,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.feature_extractor = PhaseShiftedMultiResolutionLSTM(input_size, hidden_size, num_layers)
         self.activation = nn.LeakyReLU()
-        self.linear = nn.Linear((128 * resolution) * hidden_size,
+        self.linear = nn.Linear(128 * resolution * hidden_size,
                                 embedding_dim_size)  # Concatenate outputs from all resolutions
         self.batch_norm = nn.BatchNorm1d(embedding_dim_size)
         self.dropout = nn.Dropout(dropout)
@@ -61,8 +61,8 @@ class Encoder(nn.Module):
         concatenated_features = concatenated_features.reshape(
             (batch_size, -1))  # Concatenate outputs from all resolutions
         # Tanh activation to make sure the diffusion process works fine
-        z = nn.functional.tanh(self.linear(concatenated_features))
-        # z = self.batch_norm(z)
+        z = self.activation(self.linear(concatenated_features))
+        z = self.batch_norm(z)
         z = self.dropout(z)
         return z
 
