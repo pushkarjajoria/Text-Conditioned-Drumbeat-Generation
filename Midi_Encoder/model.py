@@ -1,10 +1,31 @@
 import torch
 import yaml
-from torch import nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from DDPM.main import load_or_process_dataset
+import torch.nn as nn
+
+
+class PhaseShiftedMultiResolutionLSTM(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, batch_first=True):
+        super(PhaseShiftedMultiResolutionLSTM, self).__init__()
+        self.num_resolutions = 3  # For 32nd notes, 16th notes, 8th notes
+        self.lstm_layers = nn.ModuleList([nn.LSTM(input_size, hidden_size, num_layers, batch_first=batch_first)
+                                          for _ in range(self.num_resolutions)])
+
+    def forward(self, x):
+        outputs = []
+        for i in range(self.num_resolutions):
+            resolution_outputs = []
+            # For each stride, also change the starting position
+            for start in range(0, 2 ** i):
+                sliced_input = x[:, start::2 ** i, :]
+                lstm_out, _ = self.lstm_layers[i](sliced_input)
+                resolution_outputs.append(lstm_out)
+            # Combine outputs for different starts at the same resolution
+            outputs.append(torch.cat(resolution_outputs, dim=1))  # Assuming concatenation along the sequence length dimension
+        return outputs
 
 
 class MultiResolutionLSTM(nn.Module):
@@ -26,7 +47,7 @@ class MultiResolutionLSTM(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, embedding_dim_size, dropout=0.0):
         super(Encoder, self).__init__()
-        self.feature_extractor = MultiResolutionLSTM(input_size, hidden_size, num_layers)
+        self.feature_extractor = PhaseShiftedMultiResolutionLSTM(input_size, hidden_size, num_layers)
         self.activation = nn.LeakyReLU()
         self.linear = nn.Linear((128 + 64 + 32) * hidden_size,
                                 embedding_dim_size)  # Concatenate outputs from all resolutions
@@ -39,7 +60,8 @@ class Encoder(nn.Module):
         concatenated_features = torch.cat(features, dim=1)
         concatenated_features = concatenated_features.reshape(
             (batch_size, -1))  # Concatenate outputs from all resolutions
-        z = self.activation(self.linear(concatenated_features))
+        # Tanh activation to make sure the diffusion process works fine
+        z = nn.functional.tanh(self.linear(concatenated_features))
         z = self.batch_norm(z)
         z = self.dropout(z)
         return z
