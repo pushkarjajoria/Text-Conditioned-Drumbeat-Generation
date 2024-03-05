@@ -94,10 +94,10 @@ class LatentDiffusion:
             z = torch.randn((n, self.latent_dimension)).to(self.device)
             for i in tqdm(reversed(range(1, self.noise_steps)), position=0):
                 t = (torch.ones(n) * i).long().to(self.device)
-                predicted_noise = denoising_model(z, t, text_embeddings).permute(0, 2, 1)
-                alpha = self.alpha[t][:, None, None]
-                alpha_hat = self.alpha_hat[t][:, None, None]
-                beta = self.beta[t][:, None, None]
+                predicted_noise = denoising_model(z, t, text_embeddings)
+                alpha = self.alpha[t][:, None]
+                alpha_hat = self.alpha_hat[t][:, None]
+                beta = self.beta[t][:, None]
                 if i > 1:
                     noise = torch.randn_like(z)
                 else:
@@ -108,8 +108,8 @@ class LatentDiffusion:
                     beta) * noise
         denoising_model.train()
         midi_decoder.eval()
-        decoded_midi = midi_decoder.decode(z)
-        decoded_midi = (decoded_midi.clamp(0, 1)) / 2
+        decoded_midi = midi_decoder.decode_midi(z)
+        decoded_midi = decoded_midi.clamp(0, 1)
         decoded_midi = (decoded_midi * 127).type(torch.uint8)
         midi_decoder.train()
         return decoded_midi

@@ -145,17 +145,32 @@ def generate(config):
     clamp_model.eval()
     print("Loaded the pretrained CLAMP model successfully")
 
-    model = ConditionalLatentEncDecMHA(config['time_embedding_dimension'], clamp_model.latent_dimension, device).to(device)
-    model.load_state_dict(torch.load(config['ddpm_model_path']))
+    model = ConditionalUNet(config['z_dimension'], clamp_model.latent_dimension, config['time_embedding_dimension']).to(device)
+    model_state_path = "DDPM/trained_models/Latent conditional DDPM 03-04 20:00/model_final.pth"
+    if torch.cuda.is_available():
+        model.load_state_dict(torch.load(model_state_path))
+    else:
+        model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
     model.eval()
-
-    text = ["Punk 200 Tom Groove Tom Groove F6", "Punk 200 Tom Groove Tom Groove F6 2"]
+    text = ["Rock Essentials 8th Rock Rock Basic", "Country song pop chorus"]
     # file_name_and_tags = get_filenames_and_tags(dataset_dir=config['dataset_dir'], filter_common_tags=True)
     # text_from_dataset = random.choices(list(file_name_and_tags.values()), k=5)
     text_prompts = text
+    autoencoder_config_path = "Midi_Encoder/config.yaml"
+    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run/final_model.pt"
+    midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
+    if torch.cuda.is_available():
+        midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
+    else:
+        midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path, map_location=torch.device('cpu')))
+
+    print("Loaded encoder decoder model successfully.")
+
     text_embeddings = clamp_model.get_text_embeddings(text_prompts)
-    sampled_beats = diffusion.sample_conditional(model, n=len(text_prompts), text_embeddings=text_embeddings).numpy().squeeze()
+    sampled_beats = diffusion.sample_conditional(model, n=len(text_prompts),
+                                                 text_embeddings=text_embeddings, midi_decoder=midi_encoder_decoder).numpy().squeeze()
     file_names = text_prompts
+    sampled_beats = sampled_beats.transpose((0, 2, 1))
     save_midi(sampled_beats, config['results_dir'], file_names=file_names)
     print("Done")
 
@@ -178,8 +193,8 @@ def reconstruct_dataset_midi(config):
 if __name__ == "__main__":
     config_path = 'DDPM/config.yaml'
     config = load_config(config_path)
-    train(config)
-    # generate(config)
+    # train(config)
+    generate(config)
     # reconstruct_dataset_midi(config)
 
 

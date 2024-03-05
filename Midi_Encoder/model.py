@@ -50,9 +50,10 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.output_size = output_size
         self.num_layers = num_layers
+        self.embedding_dim_size = embedding_dim_size
 
         # Define linear layers for expanding the latent space
-        self.linear1 = nn.Linear(embedding_dim_size, embedding_dim_size * 4)  # Expand to (batch, 128, 4)
+        self.linear1 = nn.Linear(embedding_dim_size, 128 * 4)  # Expand to (batch, 128, 4)
 
         # Define LSTM layer for further processing
         # LSTM (input_size, hidden_size, num_layers=1, bias=True, batch_first=False,
@@ -120,4 +121,3 @@ if __name__ == "__main__":
     model = EncoderDecoder("Midi_Encoder/config.yaml")
     for midi, _ in train_loader:
         decoded_midi, z = model(midi)
-        loss

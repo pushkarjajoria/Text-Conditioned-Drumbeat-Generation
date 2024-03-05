@@ -11,7 +11,7 @@ decoder:
   dropout: 0.2  # Optional dropout rate
 
 training:
-  embedding_dim_size: 128
+  embedding_dim_size: 64
   learning_rate: 0.001
   batch_size: 32
   num_epochs: 100
