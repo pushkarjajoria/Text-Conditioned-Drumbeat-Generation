@@ -86,7 +86,7 @@ def train(config):
     early_stopping = EarlyStopping(patience=10)
 
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run_server/final_model.pt"
+    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
@@ -102,7 +102,7 @@ def train(config):
             text_embeddings = clamp_model.get_text_embeddings(text_data)
             drum_beats = drum_beats.to(device)
             drum_beat_latent_code = midi_encoder_decoder.encoder(drum_beats.permute(0, 2, 1))
-            normalized_drum_beat_latent_code = nn.tanh(drum_beat_latent_code)
+            normalized_drum_beat_latent_code = torch.tanh(drum_beat_latent_code)
             t = diffusion.sample_timesteps(drum_beat_latent_code.shape[0]).to(device)
             z_t, noise = diffusion.noise_z(normalized_drum_beat_latent_code, t)
             predicted_noise = model(z_t, t, text_embeddings)
