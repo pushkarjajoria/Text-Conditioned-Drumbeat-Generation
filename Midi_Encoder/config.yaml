@@ -11,14 +11,13 @@ decoder:
   dropout: 0.2  # Optional dropout rate
 
 training:
-  embedding_dim_size: 64
+  embedding_dim_size: 128
   learning_rate: 0.001
   batch_size: 32
   num_epochs: 100
   optimizer: adam  # Options: adam, sgd, rmsprop, etc.
   loss_function: mse_loss  # Choose appropriate loss function based on task
   shuffle: true  # Whether to shuffle the training data
-  device: cuda  # Choose 'cuda' for GPU training or 'cpu' for CPU training
 
 scheduler:
   use_scheduler: true  # Whether to use learning rate scheduler

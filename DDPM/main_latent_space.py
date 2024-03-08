@@ -72,7 +72,7 @@ def train(config):
     early_stopping = EarlyStopping(patience=10)
 
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run_server/final_model.pt"
+    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
@@ -123,16 +123,10 @@ def train(config):
 
 def generate(config):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    diffusion = LatentDiffusion()
+    diffusion = LatentDiffusion(latent_dimension=64)
 
-    # Initialize models and optimizer
-    clamp_model = CLAMP().to(device)
-    clamp_model.load_state_dict(torch.load(config['clamp_model_path']))
-    clamp_model.eval()
-    print("Loaded the pretrained CLAMP model successfully")
-
-    model = ConditionalUNet(config['z_dimension'], clamp_model.latent_dimension, config['time_embedding_dimension']).to(device)
-    model_state_path = "DDPM/trained_models/Latent conditional DDPM 03-04 20:00/model_final.pth"
+    model = ConditionalUNet(time_encoding_dim=16).to(device)
+    model_state_path = "DDPM/trained_models/Latent conditional DDPM 03-08 12:53/model_final.pth"
     if torch.cuda.is_available():
         model.load_state_dict(torch.load(model_state_path))
     else:
@@ -150,9 +144,8 @@ def generate(config):
 
     print("Loaded encoder decoder model successfully.")
 
-    text_embeddings = clamp_model.get_text_embeddings(text_prompts)
     sampled_beats = diffusion.sample_conditional(model, n=len(text_prompts),
-                                                 text_embeddings=text_embeddings, midi_decoder=midi_encoder_decoder).numpy().squeeze()
+                                                 text_keywords=text, midi_decoder=midi_encoder_decoder).numpy().squeeze()
     file_names = text_prompts
     sampled_beats = sampled_beats.transpose((0, 2, 1))
     save_midi(sampled_beats, config['results_dir'], file_names=file_names)

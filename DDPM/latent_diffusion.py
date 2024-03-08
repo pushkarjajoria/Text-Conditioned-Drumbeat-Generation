@@ -86,14 +86,14 @@ class LatentDiffusion:
     def sample_timesteps(self, n):
         return torch.randint(low=1, high=self.noise_steps, size=(n,))
 
-    def sample_conditional(self, denoising_model, n, text_embeddings, midi_decoder):
+    def sample_conditional(self, denoising_model, n, text_keywords, midi_decoder):
         logging.info(f"Sampling {n} new drum beats")
         denoising_model.eval()
         with torch.no_grad():
             z = torch.randn((n, self.latent_dimension)).to(self.device)
             for i in tqdm(reversed(range(1, self.noise_steps)), position=0):
                 t = (torch.ones(n) * i).long().to(self.device)
-                predicted_noise = denoising_model(z, t, text_embeddings)
+                predicted_noise = denoising_model(z, t, text_keywords)
                 alpha = self.alpha[t][:, None]
                 alpha_hat = self.alpha_hat[t][:, None]
                 beta = self.beta[t][:, None]
@@ -107,8 +107,8 @@ class LatentDiffusion:
                     beta) * noise
         denoising_model.train()
         midi_decoder.eval()
-        z_raw = torch.atanh(z)
-        decoded_midi = midi_decoder.decode_midi(z_raw)
+        # z_raw = torch.atanh(z)
+        decoded_midi = midi_decoder.decode_midi(z)
         decoded_midi = decoded_midi.clamp(0, 1)
         decoded_midi = (decoded_midi * 127).type(torch.uint8)
         midi_decoder.train()

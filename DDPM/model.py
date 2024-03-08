@@ -187,7 +187,7 @@ class ConditionalUNet(nn.Module):
         batch_size = z.shape[0]
         t_encoded = self.pos_encoding(t)
         random_number = random.uniform(0, 1)
-        if random_number < 0.05:
+        if random_number < 0.05: # Run diffusion with an empty context 5% of the times.
             keyword_bpm_encoding = torch.zeros((batch_size, self.keyword_processing.emb_size))
         else:
             keyword_bpm_encoding = self.keyword_processing.encode_batch(key_words)
@@ -197,7 +197,7 @@ class ConditionalUNet(nn.Module):
         combined_input = torch.cat([z, combined_context], dim=-1)
         x1 = self.activation(self.bn1(self.linear(combined_input)))
         x2 = self.activation(self.bn2(self.linear2(x1)))
-        x3 = self.activation(self.bn3(self.linear3(x2)))
+        x3 = torch.tanh(self.bn3(self.linear3(x2)))
         return x3
 
 
