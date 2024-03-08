@@ -127,10 +127,10 @@ class EncoderDecoder(nn.Module):
         z = self.encoder(x)
 
         # Sample a scaling factor for the noise between 0.001 and 0.01
-        noise_scale = 0.001 + (0.01 - 0.001) * torch.rand(1)
+        noise_scale = 0.001 + (0.01 - 0.001) * torch.rand(1, device=self.device)
 
         # Generate random Gaussian noise with the same shape as z, scaled by the sampled factor
-        noise = (torch.randn_like(z) * noise_scale).to(self.device)
+        noise = torch.randn_like(z, device=self.device) * noise_scale
 
         # Add the noise to z to make the model more robust
         z_noisy = z + noise
