@@ -72,7 +72,7 @@ def train(config):
     early_stopping = EarlyStopping(patience=10)
 
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run/final_model.pt"
+    autoencoder_model_path = "Midi_Encoder/run 128/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
@@ -123,19 +123,19 @@ def train(config):
 
 def generate(config):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    diffusion = LatentDiffusion(latent_dimension=64)
+    diffusion = LatentDiffusion(latent_dimension=128)
 
     model = ConditionalUNet(time_encoding_dim=16).to(device)
-    model_state_path = "DDPM/trained_models/Latent conditional DDPM 03-08 12:53/model_final.pth"
+    model_state_path = "DDPM/trained_models/Latent conditional DDPM 03-08 13:44/model_final.pth"
     if torch.cuda.is_available():
         model.load_state_dict(torch.load(model_state_path))
     else:
         model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
     model.eval()
-    text = ["Rock Essentials 8th Rock Rock Basic", "Country song pop chorus"]
+    text = ["Rock fill 8th", "blues shuffle"]
     text_prompts = text
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run_server/final_model.pt"
+    autoencoder_model_path = "Midi_Encoder/run 128/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
@@ -203,8 +203,8 @@ def get_keywords_map(config):
 if __name__ == "__main__":
     config_path = 'DDPM/config.yaml'
     config = load_config(config_path)
-    train(config)
-    # generate(config)
+    # train(config)
+    generate(config)
     # reconstruct_dataset_midi(config)
     # get_keywords_map(config)
 

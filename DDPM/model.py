@@ -163,12 +163,12 @@ class ConditionalUNet(nn.Module):
         self.time_dim = time_encoding_dim
         # Assuming self.keyword_processing is defined elsewhere with an appropriate emb_size attribute
         self.keyword_processing = MultiHotEncoderWithBPM()
-        self.linear = nn.Linear(16 + 58 + 64, 256)  # Adjust the input size as per your actual sizes
+        self.linear = nn.Linear(16 + 58 + 128, 256)  # Adjust the input size as per your actual sizes
         self.bn1 = nn.BatchNorm1d(256)
-        self.linear2 = nn.Linear(256, 128)
-        self.bn2 = nn.BatchNorm1d(128)
-        self.linear3 = nn.Linear(128, 64)
-        self.bn3 = nn.BatchNorm1d(64)
+        self.linear2 = nn.Linear(256, 512)
+        self.bn2 = nn.BatchNorm1d(512)
+        self.linear3 = nn.Linear(512, 128)
+        self.bn3 = nn.BatchNorm1d(128)
         self.activation = nn.ReLU()
 
     def pos_encoding(self, t):

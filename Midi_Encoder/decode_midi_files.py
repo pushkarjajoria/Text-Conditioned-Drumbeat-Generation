@@ -9,17 +9,17 @@ from Midi_Encoder.model import EncoderDecoder
 from utils.midi_processing.mid2numpy import save_numpy_as_midi
 from utils.utils import save_midi
 
-checkpoint_path = "Midi_Encoder/runs/midi_autoencoder_run/final_model.pt"
 device = 'cpu'
 # Load dataset and initialize DataLoader
 train_dataset = load_or_process_dataset(dataset_dir="datasets/Groove_Monkee_Mega_Pack_GM")
 train_loader = DataLoader(train_dataset, batch_size=3, shuffle=True)
 
-# Initialize model and move it to the appropriate device
-model = EncoderDecoder("Midi_Encoder/config.yaml").to(device)
+autoencoder_config_path = "Midi_Encoder/config.yaml"
+autoencoder_model_path = "Midi_Encoder/run 128/final_model.pt"
+model = EncoderDecoder(autoencoder_config_path).to(device)
 
 # Load the model checkpoint
-checkpoint = torch.load(checkpoint_path, map_location=device)
+checkpoint = torch.load(autoencoder_model_path, map_location=device)
 model.load_state_dict(checkpoint)
 
 # Directories for saving original and reconstructed MIDI files
