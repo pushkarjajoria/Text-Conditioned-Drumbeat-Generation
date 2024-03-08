@@ -1,7 +1,10 @@
+import random
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import MultiheadAttention
+import re
 
 
 class UnconditionalEncDecMHA(nn.Module):
@@ -95,36 +98,78 @@ class ConditionalEncDecMHA(nn.Module):
         return out
 
 
+class MultiHotEncoderWithBPM:
+    # Class variable containing the curated list of keywords.
+    keywords = ['rock', '4-4', 'electronic', 'fill', 'ride', 'funk', 'fills', '8ths', '8-bar', 'shuffle', 'jazz',
+                'half-time', 'blues', 'chorus', 'crash', 'verse', '8th', 'fusion', 'country', 'intro', 'shuffles',
+                '16ths', 'metal', 'swing', 'quarter', 'hard', 'retro', 'bridge', 'tom', 'punk', 'trance', 'hats',
+                'latin', 'kick', 'techno', 'slow', 'progressive', 'bongo', 'house', 'african', 'samba', 'intros',
+                'triplet', 'bell', 'urban', 'ballad', 'snare', 'funky', 'fast', 'rides', 'hip', 'hop', 'toms', 'four',
+                'downbeat', 'cowbell', 'pop']
+
+    def __init__(self):
+        self.emb_size = len(self.keywords) + 1
+
+    @classmethod
+    def encode_batch(cls, input_strings):
+        """
+        Encode a batch of strings into a batch of multi-hot arrays based on the presence of curated keywords.
+        Additionally, extract BPM information if present and include it in the multi-hot arrays.
+
+        :param input_strings: List of strings to be encoded.
+        :return: A list of multi-hot encoded arrays, where each array corresponds to an input string.
+                 The last element of each array represents the BPM value if present, or 0 otherwise.
+        """
+        # Initialize a list to hold the multi-hot encoded arrays
+        encoded_batch = []
+
+        # Regex pattern to find BPM (either a standalone 3-digit number or within $$$bpm)
+        bpm_pattern = re.compile(r'\b(\d{3})bpm\b|\b(\d{3})\b')
+
+        # Iterate over each input string
+        for string in input_strings:
+            string = string.lower()
+            # Initialize a multi-hot array for this string with zeros
+            multi_hot = [0] * (len(cls.keywords) + 1)  # +1 for the BPM slot
+
+            # Iterate over each keyword and its index
+            for index, keyword in enumerate(cls.keywords):
+                # Check if the keyword is present in the string
+                keyword = keyword.lower()
+                if keyword in string:
+                    # If present, set the corresponding position in the multi-hot array to 1
+                    # Here we assume that the presence of a keyword does not encode BPM information
+                    multi_hot[index] = 1
+
+            # Search for BPM information
+            bpm_search = bpm_pattern.search(string)
+            if bpm_search:
+                # If BPM information is found, use the first matching group that is not None
+                bpm_value = next((match for match in bpm_search.groups() if match is not None), '0')
+                multi_hot[-1] = int(bpm_value)  # Store the BPM value in the last slot of the multi-hot array
+            else:
+                multi_hot[-1] = 0  # No BPM information found, set to 0
+
+            # Add the encoded multi-hot array to the batch
+            encoded_batch.append(multi_hot)
+
+        return np.array(encoded_batch)
+
+
 class ConditionalUNet(nn.Module):
-    def __init__(self, z_dim=64, text_embedding_dim=64, time_dim=1, hidden_dim=256):
+    def __init__(self, time_encoding_dim):
         super(ConditionalUNet, self).__init__()
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.z_dim = z_dim
-        self.text_embedding_dim = text_embedding_dim
-        self.time_dim = time_dim
-        self.hidden_dim = hidden_dim
-
-        # Encoder
-        self.linear_encoder = nn.Sequential(
-            nn.Linear(z_dim + text_embedding_dim + self.time_dim, hidden_dim),
-            nn.ReLU()
-        )
-        self.down1 = nn.Linear(hidden_dim, hidden_dim * 2)
-        self.sa1 = MultiheadAttention(hidden_dim * 2, num_heads=4)
-        # Bottom of U-Net, deepest layer
-        self.bot = nn.Linear(hidden_dim * 2, hidden_dim * 4)
-        # Simulate up-sampling
-        self.up1 = nn.Linear(hidden_dim * 4, (hidden_dim * 2) - (time_dim + text_embedding_dim))
-        self.sa2 = MultiheadAttention(hidden_dim * 2, num_heads=4)
-        # Output transformation to predict noise
-        self.outc = nn.Linear(hidden_dim * 2, z_dim)
-
-        # Decoder
-        self.decoder = nn.Sequential(
-            nn.Linear(hidden_dim // 2, hidden_dim),  # 128 -> 256
-            nn.ReLU(),
-            nn.Linear(hidden_dim, z_dim),  # Predicting epsilon of the same dimension as Z (256 -> 128)
-        )
+        self.time_dim = time_encoding_dim
+        # Assuming self.keyword_processing is defined elsewhere with an appropriate emb_size attribute
+        self.keyword_processing = MultiHotEncoderWithBPM()
+        self.linear = nn.Linear(16 + 58 + 64, 256)  # Adjust the input size as per your actual sizes
+        self.bn1 = nn.BatchNorm1d(256)
+        self.linear2 = nn.Linear(256, 128)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.linear3 = nn.Linear(128, 64)
+        self.bn3 = nn.BatchNorm1d(64)
+        self.activation = nn.ReLU()
 
     def pos_encoding(self, t):
         channels = self.time_dim
@@ -137,29 +182,23 @@ class ConditionalUNet(nn.Module):
         pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
         return pos_enc
 
-    def forward(self, z, t, text_embedding):
+    def forward(self, z, t, key_words):
         # Embed time
+        batch_size = z.shape[0]
         t_encoded = self.pos_encoding(t)
-
+        random_number = random.uniform(0, 1)
+        if random_number < 0.05:
+            keyword_bpm_encoding = torch.zeros((batch_size, self.keyword_processing.emb_size))
+        else:
+            keyword_bpm_encoding = self.keyword_processing.encode_batch(key_words)
+            keyword_bpm_encoding = torch.tensor(keyword_bpm_encoding).to(self.device)
         # Concatenate z, text_embedding, and t_emb
-        combined_context = torch.cat([text_embedding, t_encoded], dim=-1)
+        combined_context = torch.cat([keyword_bpm_encoding, t_encoded], dim=-1)
         combined_input = torch.cat([z, combined_context], dim=-1)
-
-        # Encode
-        encoded_input = self.linear_encoder(combined_input)  # (batch, 128) output
-        z2 = self.down1(encoded_input)
-        z2, _ = self.sa1(z2, z2, z2)
-        # Bottom of U-Net, processing...
-        z_bot = self.bot(z2)
-
-        # Up-sampling with integration of timestep in each step if necessary
-        z_up1 = self.up1(z_bot)
-        z_up1_wt_context = torch.cat([z_up1, combined_context], dim=-1)
-        z_up1, _ = self.sa2(z_up1_wt_context, z_up1_wt_context, z_up1_wt_context)
-        # Continue with up-sampling...
-
-        epsilon = self.outc(z_up1)
-        return epsilon
+        x1 = self.activation(self.bn1(self.linear(combined_input)))
+        x2 = self.activation(self.bn2(self.linear2(x1)))
+        x3 = self.activation(self.bn3(self.linear3(x2)))
+        return x3
 
 
 class ConditionalLatentEncDecMHA(nn.Module):
