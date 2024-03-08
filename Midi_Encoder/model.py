@@ -106,6 +106,7 @@ class EncoderDecoder(nn.Module):
         super(EncoderDecoder, self).__init__()
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         encoder_config = config['encoder']
         self.encoder = Encoder(input_size=encoder_config['input_size'],
@@ -129,7 +130,7 @@ class EncoderDecoder(nn.Module):
         noise_scale = 0.001 + (0.01 - 0.001) * torch.rand(1)
 
         # Generate random Gaussian noise with the same shape as z, scaled by the sampled factor
-        noise = torch.randn_like(z) * noise_scale
+        noise = (torch.randn_like(z) * noise_scale).to(self.device)
 
         # Add the noise to z to make the model more robust
         z_noisy = z + noise
