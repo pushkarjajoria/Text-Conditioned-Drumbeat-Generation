@@ -203,8 +203,8 @@ def get_keywords_map(config):
 if __name__ == "__main__":
     config_path = 'DDPM/config.yaml'
     config = load_config(config_path)
-    # train(config)
-    generate(config)
+    train(config)
+    # generate(config)
     # reconstruct_dataset_midi(config)
     # get_keywords_map(config)
 

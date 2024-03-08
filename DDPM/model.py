@@ -197,7 +197,7 @@ class ConditionalUNet(nn.Module):
         combined_input = torch.cat([z, combined_context], dim=-1)
         x1 = self.activation(self.bn1(self.linear(combined_input)))
         x2 = self.activation(self.bn2(self.linear2(x1)))
-        x3 = torch.tanh(self.bn3(self.linear3(x2)))
+        x3 = self.bn3(self.linear3(x2))
         return x3
 
 
