@@ -15,7 +15,6 @@ from DDPM.latent_diffusion import LatentDiffusion
 from DDPM.model import ConditionalLatentEncDecMHA, ConditionalUNet
 from Midi_Encoder.model import EncoderDecoder
 from unsupervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags, MidiDataset
-from unsupervised_pretraining.model import CLAMP
 from unsupervised_pretraining.main import EarlyStopping, save_checkpoint
 from utils.utils import get_data, save_midi
 import torch.nn as nn
@@ -78,6 +77,7 @@ def train(config):
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
     else:
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path, map_location=torch.device('cpu')))
+    midi_encoder_decoder.eval()
 
     print("Loaded encoder decoder model successfully.")
 
@@ -87,9 +87,9 @@ def train(config):
         for drum_beats, text_data in tqdm(train_loader, desc=f"Epoch {epoch}"):
             drum_beats = drum_beats.to(device)
             drum_beat_latent_code = midi_encoder_decoder.encoder(drum_beats.permute(0, 2, 1))
-            normalized_drum_beat_latent_code = torch.tanh(drum_beat_latent_code)
+            # normalized_drum_beat_latent_code = torch.tanh(drum_beat_latent_code)
             t = diffusion.sample_timesteps(drum_beat_latent_code.shape[0]).to(device)
-            z_t, noise = diffusion.noise_z(normalized_drum_beat_latent_code, t)
+            z_t, noise = diffusion.noise_z(drum_beat_latent_code, t)
             predicted_noise = model(z_t, t, text_data)
 
             noise = noise.squeeze()
@@ -126,13 +126,13 @@ def generate(config):
     diffusion = LatentDiffusion(latent_dimension=128)
 
     model = ConditionalUNet(time_encoding_dim=16).to(device)
-    model_state_path = "DDPM/trained_models/Latent conditional DDPM 03-08 13:44/model_final.pth"
+    model_state_path = "DDPM/trained_models/Latent conditional keywords/model_final.pth"
     if torch.cuda.is_available():
         model.load_state_dict(torch.load(model_state_path))
     else:
         model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
     model.eval()
-    text = ["Rock fill 8th", "blues shuffle"]
+    text = ["latin rock", "funky blues"]
     text_prompts = text
     autoencoder_config_path = "Midi_Encoder/config.yaml"
     autoencoder_model_path = "Midi_Encoder/run 128/final_model.pt"
@@ -178,6 +178,7 @@ def get_keywords_map(config):
             if keyw not in curr_map:
                 curr_map.add(keyw)
                 map_of_keywords[keyw] += 1
+
     sorted_keywords = sorted(map_of_keywords.items(), key=lambda x: x[1], reverse=True)
     total_occurrences = sum(freq for _, freq in sorted_keywords)
     cumulative = 0
@@ -203,12 +204,7 @@ def get_keywords_map(config):
 if __name__ == "__main__":
     config_path = 'DDPM/config.yaml'
     config = load_config(config_path)
-    train(config)
-    # generate(config)
+    # train(config)
+    generate(config)
     # reconstruct_dataset_midi(config)
     # get_keywords_map(config)
-
-
-
-
-
