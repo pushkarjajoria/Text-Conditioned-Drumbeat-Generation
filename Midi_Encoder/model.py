@@ -125,24 +125,11 @@ class EncoderDecoder(nn.Module):
     def forward(self, x):
         x = x.permute(0, 2, 1)
         z = self.encoder(x)
-
-        # Sample a scaling factor for the noise between 0.001 and 0.01
-        if self.training:
-            noise_scale = 0.001 + (0.01 - 0.001) * torch.rand(1, device=self.device)
-
-            # Generate random Gaussian noise with the same shape as z, scaled by the sampled factor
-            noise = torch.randn_like(z, device=self.device) * noise_scale
-            # Add the noise to z to make the model more robust
-            z_noisy = z + noise
-
-        else:
-            z_noisy = z
-
         # Pass the noisy encoded features to the decoder
-        decoded_midi = self.decoder(z_noisy)
+        decoded_midi = self.decoder(z)
 
         # Add reconstruction loss if needed
-        return decoded_midi, z_noisy
+        return decoded_midi, z
 
     def decode_midi(self, z):
         return self.decoder(z)
