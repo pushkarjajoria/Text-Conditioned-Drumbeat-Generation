@@ -1,11 +1,7 @@
 import logging
-import os
 import torch
 from tqdm import tqdm
-
 from DDPM.ddpm import BetaSchedule
-from DDPM.model import EncoderDecoderBN, ConditionalLatentEncDecMHA
-from utils.utils import save_midi
 
 
 class LatentDiffusion:
