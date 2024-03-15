@@ -54,7 +54,7 @@ def train(config):
     np.random.seed(42)
 
     date_time_str = datetime.now().strftime("%m-%d %H:%M")
-    run_name = f"Latent conditional DDPM {date_time_str}"
+    run_name = f"No Mutli-LSTM DDPM {date_time_str}"
     device = "cuda" if torch.cuda.is_available() else "cpu"
     wandb.init(project='BeatBrewer', config=config)
 
@@ -71,7 +71,7 @@ def train(config):
     early_stopping = EarlyStopping(patience=10)
 
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_run/final_model.pt"
+    autoencoder_model_path = "/Midi_Encoder/runs/midi_autoencoder_run_lstm_test/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
