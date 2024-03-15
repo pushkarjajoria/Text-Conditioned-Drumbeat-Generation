@@ -24,7 +24,8 @@ class PhaseShiftedMultiResolutionLSTM(nn.Module):
                 lstm_out, _ = self.lstm_layers[i](sliced_input)
                 resolution_outputs.append(lstm_out)
             # Combine outputs for different starts at the same resolution
-            outputs.append(torch.cat(resolution_outputs, dim=1))  # Assuming concatenation along the sequence length dimension
+            outputs.append(
+                torch.cat(resolution_outputs, dim=1))  # Assuming concatenation along the sequence length dimension
         return outputs
 
 
@@ -42,6 +43,29 @@ class MultiResolutionLSTM(nn.Module):
             lstm_out, _ = self.lstm_layers[i](x[:, ::2 ** i, :])  # Stride by 2^i
             outputs.append(lstm_out)
         return outputs
+
+
+class NoFeatureExEncoder(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, embedding_dim_size, dropout=0.0, resolution=3):
+        super(NoFeatureExEncoder, self).__init__()
+        self.feature_extractor = nn.LSTM(input_size, hidden_size * resolution, num_layers,
+                                         batch_first=True)  # Change this to LSTM with hidden_size*3 for consistency
+        self.activation = nn.LeakyReLU()
+        self.linear = nn.Linear(128 * resolution * hidden_size,
+                                embedding_dim_size)  # Concatenate outputs from all resolutions
+        self.batch_norm = nn.BatchNorm1d(embedding_dim_size)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        batch_size = x.shape[0]
+        features, _ = self.feature_extractor(x)
+        # concatenated_features = torch.cat(features, dim=1)
+        concatenated_features = features.reshape(
+            (batch_size, -1))  # Concatenate outputs from all resolutions
+        z = self.activation(self.linear(concatenated_features))
+        z = self.batch_norm(z)
+        z = self.dropout(z)
+        return z
 
 
 class Encoder(nn.Module):
@@ -109,18 +133,16 @@ class EncoderDecoder(nn.Module):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         encoder_config = config['encoder']
-        self.encoder = Encoder(input_size=encoder_config['input_size'],
-                               hidden_size=encoder_config['hidden_size'],
-                               num_layers=encoder_config['num_layers'],
-                               embedding_dim_size=config['training']['embedding_dim_size'],
-                               dropout=encoder_config.get('dropout', 0.0))
+        self.encoder = NoFeatureExEncoder(input_size=encoder_config['input_size'],
+                                          hidden_size=encoder_config['hidden_size'],
+                                          num_layers=encoder_config['num_layers'],
+                                          embedding_dim_size=config['training']['embedding_dim_size'],
+                                          dropout=encoder_config.get('dropout', 0.0))
 
         decoder_config = config['decoder']
         self.decoder = Decoder(embedding_dim_size=config['training']['embedding_dim_size'],
                                output_size=decoder_config["output_size"],
                                num_layers=decoder_config["num_layers"])
-
-    import torch
 
     def forward(self, x):
         x = x.permute(0, 2, 1)
