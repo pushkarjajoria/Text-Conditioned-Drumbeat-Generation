@@ -132,7 +132,12 @@ def generate(config):
     else:
         model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
     model.eval()
-    text = ['latin triplet', '4-4 electronic', 'funky 16th', 'rock fill 8th', 'blues shuffle', 'pop ride']
+    text = [" ".join(['rock', '4-4', 'electronic', 'fill', 'ride', 'funk', 'fills', '8ths', '8-bar', 'shuffle', 'jazz',
+                'half-time', 'blues', 'chorus', 'crash', 'verse', '8th', 'fusion', 'country', 'intro', 'shuffles',
+                '16ths', 'metal', 'swing', 'quarter', 'hard', 'retro', 'bridge', 'tom', 'punk', 'trance', 'hats',
+                'latin', 'kick', 'techno', 'slow', 'progressive', 'bongo', 'house', 'african', 'samba', 'intros',
+                'triplet', 'bell', 'urban', 'ballad', 'snare', 'funky', 'fast', 'rides', 'hip', 'hop', 'toms', 'four',
+                'downbeat', 'cowbell', 'pop']), "My Name is Pushkar"]
     text_prompts = text
     autoencoder_config_path = "Midi_Encoder/config.yaml"
     autoencoder_model_path = "AIMC results/High Noise/enc_dec_model/final_model.pt"
@@ -146,7 +151,7 @@ def generate(config):
 
     sampled_beats = diffusion.sample_conditional(model, n=len(text_prompts),
                                                  text_keywords=text, midi_decoder=midi_encoder_decoder).numpy().squeeze()
-    file_names = text_prompts
+    file_names = list(map(lambda x: x[:25], text_prompts))
     sampled_beats = sampled_beats.transpose((0, 2, 1))
     save_midi(sampled_beats, config['results_dir'], file_names=file_names)
     print("Done")

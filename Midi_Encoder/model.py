@@ -133,7 +133,7 @@ class EncoderDecoder(nn.Module):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         encoder_config = config['encoder']
-        self.encoder = NoFeatureExEncoder(input_size=encoder_config['input_size'],
+        self.encoder = Encoder(input_size=encoder_config['input_size'],
                                           hidden_size=encoder_config['hidden_size'],
                                           num_layers=encoder_config['num_layers'],
                                           embedding_dim_size=config['training']['embedding_dim_size'],
