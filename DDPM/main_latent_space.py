@@ -71,6 +71,8 @@ def train(config):
     print(f"Len of dataset: {len(train_dataset)}")
 
     model = ConditionalUNet(time_encoding_dim=16).to(device)
+    model.load_state_dict(torch.load("DDPM/checkpoint/Bert Encodings DDPM 03-16 15:12/model_epoch_64.pth", map_location=device))
+    model.train()
 
     optimizer = optim.AdamW(model.parameters(), lr=config['lr'])
     mse = nn.MSELoss().to(device)
@@ -78,7 +80,7 @@ def train(config):
     early_stopping = EarlyStopping(patience=10)
 
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "AIMC results/Base Model Results/enc_dec_model/final_model.pt"
+    autoencoder_model_path = "Midi_Encoder/runs/midi_autoencoder_base_model/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
@@ -89,7 +91,7 @@ def train(config):
     print("Loaded encoder decoder model successfully.")
 
     # Training loop
-    for epoch in range(config['epochs']):
+    for epoch in range(65, config['epochs']):
         epoch_loss = 0
         for drum_beats, text_data in tqdm(train_loader, desc=f"Epoch {epoch}"):
             text_embeddings = clamp_model.get_text_embeddings(text_data)
