@@ -16,6 +16,7 @@ from DDPM.model import ConditionalLatentEncDecMHA, ConditionalUNet
 from Midi_Encoder.model import EncoderDecoder
 from unsupervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags, MidiDataset
 from unsupervised_pretraining.main import EarlyStopping, save_checkpoint
+from unsupervised_pretraining.model import CLAMP
 from utils.utils import get_data, save_midi
 import torch.nn as nn
 
@@ -54,9 +55,15 @@ def train(config):
     np.random.seed(42)
 
     date_time_str = datetime.now().strftime("%m-%d %H:%M")
-    run_name = f"No Mutli-LSTM DDPM {date_time_str}"
+    run_name = f"Bert Encodings DDPM {date_time_str}"
     device = "cuda" if torch.cuda.is_available() else "cpu"
     wandb.init(project='BeatBrewer', config=config)
+
+    # Initialize models and optimizer
+    clamp_model = CLAMP().to(device)
+    clamp_model.load_state_dict(torch.load(config['clamp_model_path'], map_location=device))
+    clamp_model.eval()
+    print("Loaded the pretrained model successfully")
 
     # Initialize dataset and dataloader
     train_dataset = load_or_process_dataset(dataset_dir=config['dataset_dir'])
@@ -71,7 +78,7 @@ def train(config):
     early_stopping = EarlyStopping(patience=10)
 
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "/Midi_Encoder/runs/midi_autoencoder_run_lstm_test/final_model.pt"
+    autoencoder_model_path = "AIMC results/Base Model Results/enc_dec_model/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
@@ -85,12 +92,13 @@ def train(config):
     for epoch in range(config['epochs']):
         epoch_loss = 0
         for drum_beats, text_data in tqdm(train_loader, desc=f"Epoch {epoch}"):
+            text_embeddings = clamp_model.get_text_embeddings(text_data)
             drum_beats = drum_beats.to(device)
             drum_beat_latent_code = midi_encoder_decoder.encoder(drum_beats.permute(0, 2, 1))
             # normalized_drum_beat_latent_code = torch.tanh(drum_beat_latent_code)
             t = diffusion.sample_timesteps(drum_beat_latent_code.shape[0]).to(device)
             z_t, noise = diffusion.noise_z(drum_beat_latent_code, t)
-            predicted_noise = model(z_t, t, text_data)
+            predicted_noise = model(z_t, t, text_embeddings)
 
             noise = noise.squeeze()
             predicted_noise = predicted_noise
@@ -209,7 +217,7 @@ def get_keywords_map(config):
 if __name__ == "__main__":
     config_path = 'DDPM/config.yaml'
     config = load_config(config_path)
-    # train(config)
-    generate(config)
+    train(config)
+    # generate(config)
     # reconstruct_dataset_midi(config)
     # get_keywords_map(config)

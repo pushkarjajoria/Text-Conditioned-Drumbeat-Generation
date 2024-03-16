@@ -163,7 +163,7 @@ class ConditionalUNet(nn.Module):
         self.time_dim = time_encoding_dim
         # Assuming self.keyword_processing is defined elsewhere with an appropriate emb_size attribute
         self.keyword_processing = MultiHotEncoderWithBPM()
-        self.linear = nn.Linear(16 + 58 + 128, 256)  # Adjust the input size as per your actual sizes
+        self.linear = nn.Linear(16 + 64 + 128, 256)  # Adjust the input size as per your actual sizes
         self.bn1 = nn.BatchNorm1d(256)
         self.linear2 = nn.Linear(256, 512)
         self.bn2 = nn.BatchNorm1d(512)
@@ -182,20 +182,13 @@ class ConditionalUNet(nn.Module):
         pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
         return pos_enc
 
-    def forward(self, z, t, key_words):
+    def forward(self, z, t, text_embeddings):
         # Embed time
         batch_size = z.shape[0]
         t_encoded = self.pos_encoding(t)
-        random_number = random.uniform(0, 1)
-        if random_number < 0.05: # Run diffusion with an empty context 5% of the times.
-            keyword_bpm_encoding = torch.zeros((batch_size, self.keyword_processing.emb_size))
-        else:
-            keyword_bpm_encoding = self.keyword_processing.encode_batch(key_words)
-            keyword_bpm_encoding = torch.tensor(keyword_bpm_encoding).to(self.device)
-        # Concatenate z, text_embedding, and t_emb
-        combined_context = torch.cat([keyword_bpm_encoding, t_encoded], dim=-1)
+        combined_context = torch.cat([text_embeddings, t_encoded], dim=-1)
         combined_input = torch.cat([z, combined_context], dim=-1)
-        x1 = self.activation(self.bn1(self.linear(combined_input)))
+        x1 = self.activation(self.bn1(self.linear(combined_input))) # Change the first linear layer
         x2 = self.activation(self.bn2(self.linear2(x1)))
         x3 = self.bn3(self.linear3(x2))
         return x3
