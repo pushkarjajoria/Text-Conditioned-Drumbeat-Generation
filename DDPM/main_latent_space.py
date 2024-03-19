@@ -133,35 +133,43 @@ def train(config):
 
 def generate(config):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    diffusion = LatentDiffusion(latent_dimension=128)
+    # Diffusion class
+    diffusion = LatentDiffusion()
 
+    # Contrastive Language Midi model
+    clamp_model = CLAMP().to(device)
+    clamp_model.load_state_dict(torch.load(config['clamp_model_path'], map_location=device))
+    clamp_model.eval()
+    print("Loaded the pretrained model successfully")
+
+    # Denoising model
     model = ConditionalUNet(time_encoding_dim=16).to(device)
-    model_state_path = "AIMC results/High Noise/ddpm_model/model_final.pth"
+    model_state_path = "AIMC results/Bert Encoding/ddpm_model/model_final.pth"
     if torch.cuda.is_available():
         model.load_state_dict(torch.load(model_state_path))
     else:
         model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
     model.eval()
-    text = [" ".join(['rock', '4-4', 'electronic', 'fill', 'ride', 'funk', 'fills', '8ths', '8-bar', 'shuffle', 'jazz',
-                'half-time', 'blues', 'chorus', 'crash', 'verse', '8th', 'fusion', 'country', 'intro', 'shuffles',
-                '16ths', 'metal', 'swing', 'quarter', 'hard', 'retro', 'bridge', 'tom', 'punk', 'trance', 'hats',
-                'latin', 'kick', 'techno', 'slow', 'progressive', 'bongo', 'house', 'african', 'samba', 'intros',
-                'triplet', 'bell', 'urban', 'ballad', 'snare', 'funky', 'fast', 'rides', 'hip', 'hop', 'toms', 'four',
-                'downbeat', 'cowbell', 'pop']), "My Name is Pushkar"]
-    text_prompts = text
+
+    # Autoencoder
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "AIMC results/High Noise/enc_dec_model/final_model.pt"
+    autoencoder_model_path = "AIMC results/Base Model Results/enc_dec_model/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
     else:
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path, map_location=torch.device('cpu')))
-
+    midi_encoder_decoder.eval()
     print("Loaded encoder decoder model successfully.")
 
+    text = ['pop rock with crash and ride', 'latin triplet', 'retro jazz swing', '.DS_Store', '4-4 electronic', 'funky 16th', 'latin rock', 'samba toms', 'slow blues with 8th bell', 'Rock fill 8th', 'blues shuffle', 'pop ride', 'funky blues']
+    text_prompts = text
+
     sampled_beats = diffusion.sample_conditional(model, n=len(text_prompts),
-                                                 text_keywords=text, midi_decoder=midi_encoder_decoder).numpy().squeeze()
-    file_names = list(map(lambda x: x[:25], text_prompts))
+                                                 text_keywords=text, midi_decoder=midi_encoder_decoder,
+                                                 text_encoder=clamp_model).numpy().squeeze()
+
+    file_names = list(map(lambda x: x[:30].replace("/", "-"), text_prompts))
     sampled_beats = sampled_beats.transpose((0, 2, 1))
     save_midi(sampled_beats, config['results_dir'], file_names=file_names)
     print("Done")
@@ -219,7 +227,7 @@ def get_keywords_map(config):
 if __name__ == "__main__":
     config_path = 'DDPM/config.yaml'
     config = load_config(config_path)
-    train(config)
-    # generate(config)
+    # train(config)
+    generate(config)
     # reconstruct_dataset_midi(config)
     # get_keywords_map(config)

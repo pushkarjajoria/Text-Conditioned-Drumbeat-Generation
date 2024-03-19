@@ -9,7 +9,8 @@ class LatentDiffusion:
     This class, just like the Diffusion class, handles the diffusion but only in the latent space.
     The input z is expected to be a vector and not a matrix/2D-Tensor (As is the case with images).
     """
-    def __init__(self, noise_steps=1000, beta_start=1e-4, beta_end=0.02, latent_dimension=128, schedule: BetaSchedule = BetaSchedule.COSINE):
+    def __init__(self, noise_steps=1000, beta_start=1e-4, beta_end=0.02, latent_dimension=128,
+                 schedule: BetaSchedule = BetaSchedule.COSINE):
         self.latent_dimension = latent_dimension
         self.noise_steps = noise_steps
         self.beta_start = beta_start
@@ -82,14 +83,15 @@ class LatentDiffusion:
     def sample_timesteps(self, n):
         return torch.randint(low=1, high=self.noise_steps, size=(n,))
 
-    def sample_conditional(self, denoising_model, n, text_keywords, midi_decoder):
+    def sample_conditional(self, denoising_model, n, text_keywords, midi_decoder, text_encoder):
         logging.info(f"Sampling {n} new drum beats")
         denoising_model.eval()
+        text_embeddings = text_encoder.get_text_embeddings(text_keywords)
         with torch.no_grad():
             z = torch.randn((n, self.latent_dimension)).to(self.device)
             for i in tqdm(reversed(range(1, self.noise_steps)), position=0):
                 t = (torch.ones(n) * i).long().to(self.device)
-                predicted_noise = denoising_model(z, t, text_keywords)
+                predicted_noise = denoising_model(z, t, text_embeddings)
                 alpha = self.alpha[t][:, None]
                 alpha_hat = self.alpha_hat[t][:, None]
                 beta = self.beta[t][:, None]
@@ -103,7 +105,6 @@ class LatentDiffusion:
                     beta) * noise
         denoising_model.train()
         midi_decoder.eval()
-        # z_raw = torch.atanh(z)
         decoded_midi = midi_decoder.decode_midi(z)
         decoded_midi = decoded_midi.clamp(0, 1)
         decoded_midi = (decoded_midi * 127).type(torch.uint8)
