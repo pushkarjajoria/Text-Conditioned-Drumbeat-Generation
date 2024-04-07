@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader
 import yaml
 from tqdm import tqdm
 import wandb
-from unsupervised_pretraining.create_unsupervised_dataset import MidiDataset, get_filenames_and_tags
-from unsupervised_pretraining.model import CLAMP
+from text_supervised_pretraining.create_unsupervised_dataset import MidiDataset, get_filenames_and_tags
+from text_supervised_pretraining.model import CLAMP
 
 
 # Other necessary imports: torchvision, numpy, etc.

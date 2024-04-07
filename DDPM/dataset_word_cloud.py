@@ -1,3 +1,4 @@
+import time
 from collections import defaultdict
 
 from matplotlib import pyplot as plt

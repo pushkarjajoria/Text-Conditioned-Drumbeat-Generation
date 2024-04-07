@@ -1,7 +1,6 @@
 import collections
 import os
 import fnmatch
-import pickle
 from collections import Counter
 import torch
 from torch.utils.data import Dataset

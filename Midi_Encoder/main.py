@@ -9,7 +9,7 @@ import numpy as np
 # Assuming these imports are from your project structure
 from DDPM.main import load_or_process_dataset
 from Midi_Encoder.model import EncoderDecoder
-from unsupervised_pretraining.main import EarlyStopping
+from text_supervised_pretraining.main import EarlyStopping
 
 
 def save_model_checkpoint(epoch, model, run_name):

@@ -1,8 +1,12 @@
+import copy
+import itertools
+import numpy
 import pickle
 from itertools import combinations
-
+import seaborn as sns
 import numpy as np
 import torch
+from matplotlib import pyplot as plt
 from scipy.spatial.distance import pdist, cdist
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
@@ -51,6 +55,19 @@ def compute_midi_distance(batch_of_midi_files):
     return distance_between_midis
 
 
+def compute_midi_hamming_distance(batch_of_midi_files):
+    distance_between_midis = []
+    # Flatten the last two dimensions (128x9) of each MIDI file for distance calculation
+    flattened_midis = batch_of_midi_files.reshape(batch_of_midi_files.shape[0], -1)
+    # Iterate over all unique pairs of MIDI files
+    for i, j in combinations(range(len(flattened_midis)), 2):
+        # Compute the mean Euclidean distance between the flattened MIDI representations
+        distance = torch.sum(torch.logical_xor(flattened_midis[i], flattened_midis[j]))
+        # Add the computed distance to the list
+        distance_between_midis.append(distance)
+    return distance_between_midis
+
+
 def compute_midi_distance_between(midi_pianorolls_one, midi_pianorolls_two):
     all_distances = []
     # Flatten the last two dimensions (128x9) of each MIDI file for distance calculation
@@ -61,6 +78,26 @@ def compute_midi_distance_between(midi_pianorolls_one, midi_pianorolls_two):
     for midi_one in flattened_one:
         for midi_two in flattened_two:
             distance = np.linalg.norm(midi_one - midi_two)/midi_one.shape[-1]
+            all_distances.append(distance)
+
+    # Sort distances to find the 1% smallest ones
+    all_distances.sort()
+    one_percent_index = int(len(all_distances) * 0.01)
+    one_percent_least_distances = all_distances[:max(1, one_percent_index)]  # Ensure at least one distance is included
+
+    return one_percent_least_distances
+
+
+def compute_midi_hamming_distance_between(midi_pianorolls_one, midi_pianorolls_two):
+    all_distances = []
+    # Flatten the last two dimensions (128x9) of each MIDI file for distance calculation
+    flattened_one = midi_pianorolls_one.reshape(midi_pianorolls_one.shape[0], -1).detach().numpy()
+    flattened_two = midi_pianorolls_two.reshape(midi_pianorolls_two.shape[0], -1)
+
+    # Compute pairwise distances between every midi in set one and every midi in set two
+    for midi_one in flattened_one:
+        for midi_two in flattened_two:
+            distance = np.sum(np.logical_xor(midi_one, midi_two))
             all_distances.append(distance)
 
     # Sort distances to find the 1% smallest ones
@@ -90,6 +127,28 @@ def compute_1_percent_least_distances(generated_midi_embeddings, dataset_midi_em
     return one_percent_least_distances
 
 
+def create_and_save_combined_plot(distances_dict, space):
+    """
+    Creates a combined KDE plot for distances from multiple models, indicating the distance measure,
+    and saves the figure.
+
+    Parameters:
+    - distances_dict: A dictionary where keys are model names and values are the distances arrays.
+    - space: The name of the space (e.g., 'midi', 'latent') for labeling and saving the plot.
+    """
+    plt.figure(figsize=(10, 6))
+    distance_measure = "Hamming" if "midi" in space else "Euclidean"
+    for model_name, distances in distances_dict.items():
+        sns.kdeplot(distances, bw_adjust=0.5, label=model_name)
+    plt.title(f'{space.capitalize()} Space - Distance Distribution\n(Distance Measure: {distance_measure})')
+    plt.xlabel('Distance')
+    plt.ylabel('Density')
+    plt.legend(title='Model')
+    plt.savefig(f"AIMC results/Combined_{space}_distance_distribution.png")
+    plt.show()
+    plt.close()
+
+
 diffusion = LatentDiffusion(latent_dimension=128)
 
 prompts = ['latin triplet', '4-4 electronic', 'funky 16th', 'rock fill 8th',
@@ -108,8 +167,8 @@ models = [(low_noise_ddpm, low_noise_ae), (high_noise_ddpm, high_noise_ae), (no_
 config_path = 'DDPM/config.yaml'
 config = load_config(config_path)
 train_dataset = load_or_process_dataset(dataset_dir=config['dataset_dir'])
-subset_size = 100  # For example, to use only 100 samples from your dataset
-train_dataset = Subset(train_dataset, list(range(subset_size)))
+# subset_size = 100  # For example, to use only 100 samples from your dataset
+# train_dataset = Subset(train_dataset, list(range(subset_size)))
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False)
 
 total_stats = {}
@@ -118,6 +177,8 @@ for drum_beats, _ in tqdm(train_loader):
     dataset_midi_space.extend(drum_beats.numpy())
 
 dataset_midi_space = (np.array(dataset_midi_space) * 255).astype(int)
+dataset_midi_space[dataset_midi_space <= 5] = 0
+dataset_midi_space[dataset_midi_space > 5] = 1
 
 for model_name, (ddpm_model, enc_dec_model) in zip(["Low Noise", "High Noise", "No Noise"], models):
     model_stats = {
@@ -142,10 +203,12 @@ for model_name, (ddpm_model, enc_dec_model) in zip(["Low Noise", "High Noise", "
         # Generate 10 MIDI files
         # Assume diffusion.sample_conditional returns a batch of generated MIDI files based on the prompt
         sampled_midi = diffusion.sample_conditional(ddpm_model, n=10, text_keywords=prompt_repeated, midi_decoder=enc_dec_model)
-
+        sampled_midi_binary = copy.deepcopy(sampled_midi)
+        sampled_midi_binary[sampled_midi_binary <= 5] = 0
+        sampled_midi_binary[sampled_midi_binary > 5] = 1
         # Compute distances in the MIDI space
         # Assuming sampled_midi is in the correct format to compute distances directly
-        distances_midi = compute_midi_distance(sampled_midi)
+        distances_midi = compute_midi_hamming_distance(sampled_midi_binary)
         model_stats["midi"].append(distances_midi)
 
         # Embed the MIDI to get 10 Z vectors in the latent space
@@ -154,7 +217,7 @@ for model_name, (ddpm_model, enc_dec_model) in zip(["Low Noise", "High Noise", "
         model_stats["latent"].append(distances_latent)
 
         # Compute the distance from all the dataset and choose the top 1% of datapoints for analysis
-        distances_from_dataset_midi = compute_midi_distance_between(sampled_midi, dataset_midi_space)
+        distances_from_dataset_midi = compute_midi_hamming_distance_between(sampled_midi_binary, dataset_midi_space)
 
         distances_from_dataset_latent = compute_1_percent_least_distances(z, dataset_latent_embeddings)
 
@@ -163,7 +226,7 @@ for model_name, (ddpm_model, enc_dec_model) in zip(["Low Noise", "High Noise", "
         model_stats["dataset_latent"].append(distances_from_dataset_latent)
 
     # Compute and publish stats for the model
-    with open("AIMC results/distance_results.txt", "a") as file:
+    with open("AIMC results/distance_results_hamming.txt", "a") as file:
         for space in ["midi", "latent", "dataset_midi", "dataset_latent"]:
             distances = np.concatenate(model_stats[space])
             mean, std, min_dis, max_dis = compute_stats(distances)
@@ -173,9 +236,28 @@ for model_name, (ddpm_model, enc_dec_model) in zip(["Low Noise", "High Noise", "
 
             # Write to file
             file.write(output_text)
+
     # Add model stats to total_stats for use later
     total_stats[model_name] = model_stats
 
+stats_by_space = {
+    "midi": {},
+    "latent": {},
+    "dataset_midi": {},
+    "dataset_latent": {}
+}
+for _k_model, _v_model in total_stats.items():
+    for _k_space, _v_space in _v_model.items():
+        stats_by_space[_k_space][_k_model] = _v_space
+
+for k in stats_by_space.keys():
+    for _key_space, _value_space in stats_by_space[k].items():
+        stats_by_space[k][_key_space] = list(itertools.chain.from_iterable(_value_space))
+        stats_by_space[k][_key_space] = list(map(lambda x: x if type(x) is int or type(x) is float else x.item(), stats_by_space[k][_key_space]))
+
+for space_name in stats_by_space.keys():
+    create_and_save_combined_plot(stats_by_space[space_name], space_name)
+
 # Save the total_stats in a file
-with open("AIMC results/distance_stats.pickle", "wb") as f:
+with open("AIMC results/distance_stats_hamming.pickle", "wb") as f:
     pickle.dump(total_stats, f)
