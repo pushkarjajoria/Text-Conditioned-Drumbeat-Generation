@@ -51,6 +51,14 @@ def save_midi(midis, midi_path, epoch=None, ghost_threshold=5, file_names=None, 
         save_numpy_as_midi(os.path.join(folder_path, filename), midi_pianoroll, ghost_threshold, resolution)
 
 
+def save_midi_without_structure(midis, midi_path, ghost_threshold=5, file_names=None, resolution=4):
+    folder_path = os.path.join(midi_path)
+    os.makedirs(folder_path, exist_ok=True)
+    for i, midi_pianoroll in enumerate(midis):
+        # filename = file_names[i] + ".mid" if file_names else f"Sample{i}.mid"
+        save_numpy_as_midi(os.path.join(folder_path, file_names[i]), midi_pianoroll, ghost_threshold, resolution)
+
+
 def get_data(args):
     data = np.load(args.dataset_path)
     data = data.astype(np.float32)

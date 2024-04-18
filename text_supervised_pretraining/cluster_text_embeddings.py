@@ -4,7 +4,7 @@ from collections import defaultdict
 import torch
 from torch.utils.data import DataLoader, Subset
 from DDPM.main import load_config, load_or_process_dataset
-from unsupervised_pretraining.model import CLAMP
+from text_supervised_pretraining.model import CLAMP
 from sklearn.cluster import KMeans
 import numpy as np
 from collections import Counter
@@ -57,7 +57,7 @@ def generate_word_clouds(cluster_keywords, prefix=""):
         plt.axis("off")
         plt.tight_layout(pad=0)
         plt.title(f"{prefix}Cluster {cluster_id}")
-        plt.savefig("unsupervised_pretraining/plots/" + f"{prefix.lower()}cluster_{cluster_id}_wordcloud.png", format='png')
+        plt.savefig("text_supervised_pretraining/plots/" + f"{prefix.lower()}cluster_{cluster_id}_wordcloud.png", format='png')
         plt.show()
 
 
@@ -80,7 +80,7 @@ train_dataset = load_or_process_dataset(dataset_dir=config['dataset_dir'])
 # train_dataset = Subset(train_dataset, indices=range(100))
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 
-pickle_file_path = os.path.join('unsupervised_pretraining', 'text_embeddings_mapping.pkl')
+pickle_file_path = os.path.join('text_supervised_pretraining', 'text_embeddings_mapping.pkl')
 
 if os.path.exists(pickle_file_path):
     print("Pickle file for text embedding found.")

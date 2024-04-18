@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 import pypianoroll
 from tqdm import tqdm
 
-from unsupervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags
+from text_supervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags
 from utils.midi_processing.mid2numpy import read_midi, midi2numpy
 from utils.utils import save_midi
 

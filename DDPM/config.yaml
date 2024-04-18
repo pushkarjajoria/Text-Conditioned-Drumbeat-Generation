@@ -9,12 +9,13 @@ z_dimension: 64
 
 # Paths for datasets, models, and results
 dataset_dir: "datasets/Groove_Monkee_Mega_Pack_GM"
-clamp_model_path: "unsupervised_pretraining/trained_models/0210_2142/model_final.pth"
+clamp_model_path: "text_supervised_pretraining/trained_models/0210_2142/model_final.pth"
 checkpoint_dir: "DDPM/checkpoint/conditional_ddpm"
 model_dir: "DDPM/trained_models/conditional_ddpm"
 results_dir: "DDPM/results"
 reconstruct_dir: "DDPM/reconstruction"
 ddpm_model_path: "DDPM/trained_models/Conditional DDPM 02-11 16:52/model_final.pth"
+survey_results_dir: "DDPM/results/Survey Midi Files"
 
 # Early stopping parameters
 early_stopping_patience: 10

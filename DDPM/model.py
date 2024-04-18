@@ -156,6 +156,44 @@ class MultiHotEncoderWithBPM:
         return np.array(encoded_batch)
 
 
+class ConditionalUNetBERT(nn.Module):
+    def __init__(self, time_encoding_dim):
+        super(ConditionalUNetBERT, self).__init__()
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.time_dim = time_encoding_dim
+        # Assuming self.keyword_processing is defined elsewhere with an appropriate emb_size attribute
+        self.keyword_processing = MultiHotEncoderWithBPM()
+        self.linear = nn.Linear(16 + 64 + 128, 256)  # Adjust the input size as per your actual sizes
+        self.bn1 = nn.BatchNorm1d(256)
+        self.linear2 = nn.Linear(256, 512)
+        self.bn2 = nn.BatchNorm1d(512)
+        self.linear3 = nn.Linear(512, 128)
+        self.bn3 = nn.BatchNorm1d(128)
+        self.activation = nn.ReLU()
+
+    def pos_encoding(self, t):
+        channels = self.time_dim
+        inv_freq = 1.0 / (
+                10000
+                ** (torch.arange(0, channels, 2, device=self.device).float() / channels)
+        )
+        pos_enc_a = torch.sin(t.unsqueeze(1) * inv_freq.unsqueeze(0))
+        pos_enc_b = torch.cos(t.unsqueeze(1) * inv_freq.unsqueeze(0))
+        pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
+        return pos_enc
+
+    def forward(self, z, t, text_embeddings):
+        # Embed time
+        batch_size = z.shape[0]
+        t_encoded = self.pos_encoding(t)
+        combined_context = torch.cat([text_embeddings, t_encoded], dim=-1)
+        combined_input = torch.cat([z, combined_context], dim=-1)
+        x1 = self.activation(self.bn1(self.linear(combined_input))) # Change the first linear layer
+        x2 = self.activation(self.bn2(self.linear2(x1)))
+        x3 = self.bn3(self.linear3(x2))
+        return x3
+
+
 class ConditionalUNet(nn.Module):
     def __init__(self, time_encoding_dim):
         super(ConditionalUNet, self).__init__()

@@ -15,7 +15,7 @@ from text_supervised_pretraining.model import CLAMP
 
 # Other necessary imports: torchvision, numpy, etc.
 
-with open('unsupervised_pretraining/config.yaml', 'r') as file:
+with open('text_supervised_pretraining/config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 # Define hyperparameters from the config
@@ -26,7 +26,7 @@ WEIGHT_DECAY = config['Training']['weight_decay']
 CHECKPOINT_INTERVAL = config['Training']['checkpoint_interval']
 
 
-def save_checkpoint(model, run_name, epoch, wandb, save_type="checkpoint", dir="unsupervised_pretraining"):
+def save_checkpoint(model, run_name, epoch, wandb, save_type="checkpoint", dir="text_supervised_pretraining"):
     path = os.path.join(dir, save_type, run_name)
     os.makedirs(path, exist_ok=True)
     filename = f'model_epoch_{epoch}.pth' if epoch \

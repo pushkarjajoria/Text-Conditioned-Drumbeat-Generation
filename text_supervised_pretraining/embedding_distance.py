@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from DDPM.ddpm import Diffusion
 from DDPM.main import load_or_process_dataset, load_config
 from DDPM.model import ConditionalEncDecMHA
-from unsupervised_pretraining.model import CLAMP
+from text_supervised_pretraining.model import CLAMP
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -36,7 +36,7 @@ similar_midis = list(grouped_tags.values())
 
 # Initialize models and optimizer
 clamp_model = CLAMP().to(device)
-clamp_model.load_state_dict(torch.load("unsupervised_pretraining/trained_models/0210_2142/model_final.pth"))
+clamp_model.load_state_dict(torch.load("text_supervised_pretraining/trained_models/0210_2142/model_final.pth"))
 clamp_model.eval()
 print("Loaded the pretrained model successfully")
 

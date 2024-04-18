@@ -110,6 +110,34 @@ class LatentDiffusion:
         midi_decoder.train()
         return decoded_midi
 
+    def sample_conditional_bert(self, denoising_model, n, text_keywords, midi_decoder, text_encoder):
+        logging.info(f"Sampling {n} new drum beats")
+        denoising_model.eval()
+        text_embeddings = text_encoder.get_text_embeddings(text_keywords)
+        with torch.no_grad():
+            z = torch.randn((n, self.latent_dimension)).to(self.device)
+            for i in tqdm(reversed(range(1, self.noise_steps)), position=0):
+                t = (torch.ones(n) * i).long().to(self.device)
+                predicted_noise = denoising_model(z, t, text_embeddings)
+                alpha = self.alpha[t][:, None]
+                alpha_hat = self.alpha_hat[t][:, None]
+                beta = self.beta[t][:, None]
+                if i > 1:
+                    noise = torch.randn_like(z)
+                else:
+                    noise = torch.zeros_like(z)
+                # x_t-1|(x_t, t)
+                z = 1 / torch.sqrt(alpha) * (
+                        z - ((1 - alpha) / (torch.sqrt(1 - alpha_hat))) * predicted_noise) + torch.sqrt(
+                    beta) * noise
+        denoising_model.train()
+        midi_decoder.eval()
+        decoded_midi = midi_decoder.decode_midi(z)
+        decoded_midi = decoded_midi.clamp(0, 1)
+        decoded_midi = (decoded_midi * 127).type(torch.uint8)
+        midi_decoder.train()
+        return decoded_midi
+
     def _denoising_test(self, t, noise, noised_z, z):
         alpha_t = self.alpha[t][:, None]
         alpha_hat_t = self.alpha_hat[t][:, None]

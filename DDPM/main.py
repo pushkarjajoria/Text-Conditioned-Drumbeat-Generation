@@ -11,9 +11,9 @@ import yaml
 from tqdm import tqdm
 from DDPM.ddpm import Diffusion
 from DDPM.model import ConditionalEncDecMHA
-from unsupervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags, MidiDataset
-from unsupervised_pretraining.model import CLAMP
-from unsupervised_pretraining.main import EarlyStopping, save_checkpoint
+from text_supervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags, MidiDataset
+from text_supervised_pretraining.model import CLAMP
+from text_supervised_pretraining.main import EarlyStopping, save_checkpoint
 from utils.utils import get_data, save_midi
 import torch.nn as nn
 

@@ -6,7 +6,7 @@ from transformers import BertTokenizer, BertModel
 import torch.nn.functional as F
 
 # Load config from YAML
-with open('unsupervised_pretraining/config.yaml', 'r') as f:
+with open('text_supervised_pretraining/config.yaml', 'r') as f:
     config = yaml.safe_load(f)
 
 

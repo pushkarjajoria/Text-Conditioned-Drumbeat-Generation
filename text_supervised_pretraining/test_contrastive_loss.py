@@ -2,7 +2,7 @@ import unittest
 import torch
 import torch.nn.functional as F
 
-from unsupervised_pretraining.main import contrastive_loss
+from text_supervised_pretraining.main import contrastive_loss
 
 
 class TestContrastiveLoss(unittest.TestCase):

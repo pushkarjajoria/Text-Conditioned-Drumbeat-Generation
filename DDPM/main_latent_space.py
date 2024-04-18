@@ -12,10 +12,10 @@ import wandb
 import yaml
 from tqdm import tqdm
 from DDPM.latent_diffusion import LatentDiffusion
-from DDPM.model import ConditionalLatentEncDecMHA, ConditionalUNet
+from DDPM.model import ConditionalUNet
 from Midi_Encoder.model import EncoderDecoder
-from unsupervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags, MidiDataset
-from unsupervised_pretraining.main import EarlyStopping, save_checkpoint
+from text_supervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags, MidiDataset
+from text_supervised_pretraining.main import EarlyStopping, save_checkpoint
 from utils.utils import get_data, save_midi
 import torch.nn as nn
 
@@ -126,21 +126,16 @@ def generate(config):
     diffusion = LatentDiffusion(latent_dimension=128)
 
     model = ConditionalUNet(time_encoding_dim=16).to(device)
-    model_state_path = "AIMC results/High Noise/ddpm_model/model_final.pth"
+    model_state_path = "AIMC results/No Noise/ddpm_model/model_final.pth"
     if torch.cuda.is_available():
         model.load_state_dict(torch.load(model_state_path))
     else:
         model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
     model.eval()
-    text = [" ".join(['rock', '4-4', 'electronic', 'fill', 'ride', 'funk', 'fills', '8ths', '8-bar', 'shuffle', 'jazz',
-                'half-time', 'blues', 'chorus', 'crash', 'verse', '8th', 'fusion', 'country', 'intro', 'shuffles',
-                '16ths', 'metal', 'swing', 'quarter', 'hard', 'retro', 'bridge', 'tom', 'punk', 'trance', 'hats',
-                'latin', 'kick', 'techno', 'slow', 'progressive', 'bongo', 'house', 'african', 'samba', 'intros',
-                'triplet', 'bell', 'urban', 'ballad', 'snare', 'funky', 'fast', 'rides', 'hip', 'hop', 'toms', 'four',
-                'downbeat', 'cowbell', 'pop']), "My Name is Pushkar"]
+    text = ["Rock slow 4-4 Kavach", "Rock slow 4-4 with fill and toms"]
     text_prompts = text
     autoencoder_config_path = "Midi_Encoder/config.yaml"
-    autoencoder_model_path = "AIMC results/High Noise/enc_dec_model/final_model.pt"
+    autoencoder_model_path = "AIMC results/No Noise/enc_dec_model/final_model.pt"
     midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
     if torch.cuda.is_available():
         midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
@@ -151,7 +146,7 @@ def generate(config):
 
     sampled_beats = diffusion.sample_conditional(model, n=len(text_prompts),
                                                  text_keywords=text, midi_decoder=midi_encoder_decoder).numpy().squeeze()
-    file_names = list(map(lambda x: x[:25], text_prompts))
+    file_names = list(text_prompts)
     sampled_beats = sampled_beats.transpose((0, 2, 1))
     save_midi(sampled_beats, config['results_dir'], file_names=file_names)
     print("Done")

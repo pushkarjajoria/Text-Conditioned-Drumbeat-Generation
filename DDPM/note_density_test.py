@@ -9,7 +9,7 @@ from tqdm import tqdm
 from DDPM.ddpm import Diffusion
 from DDPM.main import load_or_process_dataset
 from DDPM.model import ConditionalEncDecMHA
-from unsupervised_pretraining.model import CLAMP
+from text_supervised_pretraining.model import CLAMP
 from utils.utils import save_midi
 
 

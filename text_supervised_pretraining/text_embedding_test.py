@@ -6,8 +6,8 @@ from numpy.core.defchararray import isnumeric
 from tqdm import tqdm
 
 from DDPM.main import load_config
-from unsupervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags
-from unsupervised_pretraining.model import CLAMP
+from text_supervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags
+from text_supervised_pretraining.model import CLAMP
 
 # Load configuration and model
 config_path = 'DDPM/config.yaml'

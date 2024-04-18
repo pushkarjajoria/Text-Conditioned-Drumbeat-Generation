@@ -7,11 +7,11 @@ from torch.utils.data import DataLoader
 import yaml
 from tqdm import tqdm
 from DDPM.main import load_or_process_dataset
-from unsupervised_pretraining.model import CLAMP
+from text_supervised_pretraining.model import CLAMP
 
 # Other necessary imports: torchvision, numpy, etc.
 
-with open('unsupervised_pretraining/config.yaml', 'r') as file:
+with open('text_supervised_pretraining/config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 # Define hyperparameters from the config
