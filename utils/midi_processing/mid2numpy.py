@@ -4,8 +4,6 @@ from os.path import join, isdir, isfile
 from pprint import pformat, pprint
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 from sklearn.decomposition import PCA
 from collections import Counter
 
@@ -22,18 +20,18 @@ names = ["BD", "SD", "CH", "OH", "RD", "CR", "LT", "MT", "HT"]
 
 # map from indices to drum pitches
 dm2 = {
-    0: 36,  # BD
-    1: 38,  # SD
-    2: 42,  # CH
-    3: 46,  # OH
-    4: 51,  # RD
-    5: 49,  # CR
-    6: 41,  # LT
-    7: 45,  # MT
-    8: 48  # HT
+    0: 36,  # Bass Drum
+    1: 38,  # Snare Drum
+    2: 42,  # Closed HighHat
+    3: 46,  # Open HighHat
+    4: 51,  # Ride Cymbal
+    5: 49,  # Crash Cymbal
+    6: 41,  # Low Tom
+    7: 45,  # Mid Tom
+    8: 48   # Hight Tom
 }
 
- # missing: 65, 71, 77, 79
+# missing: 65, 71, 77, 79
 # 65: High Timbale
 # 71: Short Whistle
 # 77: Low Wood Block
@@ -62,7 +60,7 @@ dm = {
 # 2/4, 4/4, 8/4 time sig.  It's not difficult to deal with different
 # time sigs but this is all we need for now.
 nsteps = 64
-nsteps_per_beat = 2
+nsteps_per_beat = 4
 max_beats = 32
 
 
@@ -83,29 +81,28 @@ def convert_time(ticks, maxticks, nsteps_this_loop):
     return x
 
 
-def write_image(a, filename):
-    """Save an image of the pattern."""
-    # print(a.shape)
-    fig = plt.figure(figsize=(10, 4))
-    ax = fig.add_subplot(1, 1, 1)
-    im = ax.matshow(a, cmap=cm.gray_r, interpolation="nearest")
-    ax.tick_params(length=0)
-    xticks = range(0, nsteps, 4)
-    ax.set_xticks(xticks)
-    ax.set_xticklabels(map(str, xticks), fontsize=8)
-    ax.set_yticks(range(len(names)))
-    ax.set_yticklabels(names, fontsize=8)
-    ax.invert_yaxis()
-    fig.savefig(filename + ".pdf")
-    plt.close()
+# def write_image(a, filename):
+#     """Save an image of the pattern."""
+#     # print(a.shape)
+#     fig = plt.figure(figsize=(10, 4))
+#     ax = fig.add_subplot(1, 1, 1)
+#     im = ax.matshow(a, cmap=cm.gray_r, interpolation="nearest")
+#     ax.tick_params(length=0)
+#     xticks = range(0, nsteps, 4)
+#     ax.set_xticks(xticks)
+#     ax.set_xticklabels(map(str, xticks), fontsize=8)
+#     ax.set_yticks(range(len(names)))
+#     ax.set_yticklabels(names, fontsize=8)
+#     ax.invert_yaxis()
+#     fig.savefig(filename + ".pdf")
+#     plt.close()
 
 
-def numpy2midi(n):
+def numpy2midi(n, resolution=4):
     """Convert a numpy array n to a midi pattern in python-midi
     format, quantised etc."""
     # print(n)
     # print(n.shape)
-    resolution = 4
     p = midi.Pattern(resolution=resolution)  # , tick_relative=False)
 
     track = midi.Track()
@@ -164,10 +161,10 @@ def numpy2midi(n):
     return p
 
 
-def save_numpy_as_midi(ofname, X, ghost_threshold):
+def save_numpy_as_midi(ofname, X, ghost_threshold, resolution=4):
     # X *= 127.0  # scale back to midi range
     X[X < ghost_threshold] = 0.0  # filter ghost notes
-    midi.write_midifile(ofname, numpy2midi(X))
+    midi.write_midifile(ofname, numpy2midi(X, resolution))
 
 
 def read_midi(ifname):
@@ -202,8 +199,8 @@ def get_info(md):
                 info["time_sig_num"] = event.get_numerator()
                 info["time_sig_denom"] = event.get_denominator()
             if event.name == "End of Track":
-                if True:
-                    # if event.tick > 0:
+                # if True:
+                if event.tick > 0:
                     # sometimes a track is used only for metadata and
                     # has an end of track event with tick=0. this
                     # track's end time is meaningful, so we use it.
@@ -245,6 +242,7 @@ def midi2numpy(md):
     if info["track_length_in_beats"] == 8:
         a = np.concatenate((a, a, a, a), axis=1)
     elif info["track_length_in_beats"] == 16:
+        # Tiling
         a = np.concatenate((a, a), axis=1)
     else:
         pass  # 'a' is already the right length
@@ -320,35 +318,11 @@ def convert_all_midi_to_numpy(dirname):
     print(pitches_present)
 
 
-def run_pca(file):
-    """Run a principal component analysis on the drum loops. Then test
-    it by passing in some points chosen from transformed space -- it
-    will give back new arrays which we can transform to a new loop."""
-
-    X = np.load(file)
-
-    n_components = 10
-
-    # run the pca
-    pca = PCA(n_components=n_components)
-    pca.fit(X.reshape(X.shape[0], X.shape[1] * X.shape[2]))
-
-    # how good are the components?
-    print(pca.explained_variance_ratio_)
-
-    # make 10 arbitrary points in the transformed space and see where
-    # they go in the X space
-    for i in range(10):
-        y = np.random.randn(n_components) * 127  # PCA axes will be in approx this range since input was
-        x = pca.inverse_transform(y).reshape((len(names), nsteps))
-        write_image(x, "tmp%d" % i)
-
-
 if __name__ == "__main__":
     mf_64 = read_midi("/Users/pushkarjajoria/Git/BeatBrewer/datasets/Groove_Monkee_Mega_Pack_GM/Twisted GM/Bonus/088 Hip Hop Straight/088 Hip Hop Straight 1 Crash.mid")
     mf_8 = read_midi("/Users/pushkarjajoria/Git/BeatBrewer/datasets/Groove_Monkee_Mega_Pack_GM/Twisted GM/Bonus/088 Hip Hop Straight/088 Hip Hop Straight 1 Fill 1.mid")
     mf_6 = read_midi("/Users/pushkarjajoria/Git/BeatBrewer/datasets/Groove_Monkee_Mega_Pack_GM/Twisted GM/Bonus/075 Hip Hop Straight/075 Hip Hop Straight 3 Fill 2.mid")
     # x_64 = get_info(mf_64)
     # x_8 = get_info(mf_8)
-    x_6 = get_info(mf_8)
+    x_6 = get_info(mf_6)
     print("Done")

@@ -5,7 +5,7 @@ from enum import Enum
 import torch
 from tqdm import tqdm
 
-from model import EncoderDecoderBN
+from DDPM.model import EncoderDecoderBN
 from utils.utils import save_midi
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s", level=logging.INFO, datefmt="%I:%M:%S")
@@ -45,14 +45,13 @@ class Diffusion:
 
     def noise_drum_beats(self, x, t):
         """
-
-        :param x: drum beats of shape (batch x channel x num_instrument=9, num_time_slices=64 sixteenth notes.)
+        :param x: drum beats of shape (batch x num_instrument=9, num_time_slices=64 sixteenth notes.)
         :param t: number of noising time steps of shape (batch_size, )
         :return: Noised drum beats and the sampled noise both with the shape the same as x
         """
-        # Nones are changing tensor of shape (batch,) -> (batch, 1, 1, 1)
-        sqrt_alpha_hat = torch.sqrt(self.alpha_hat[t])[:, None, None, None]
-        sqrt_one_minus_alpha_ht = torch.sqrt(1. - self.alpha_hat[t])[:, None, None, None]
+        # Nones are changing tensor of shape (batch,) -> (batch, 1, 1)
+        sqrt_alpha_hat = torch.sqrt(self.alpha_hat[t])[:, None, None]
+        sqrt_one_minus_alpha_ht = torch.sqrt(1. - self.alpha_hat[t])[:, None, None]
         epsilon = torch.randn_like(x)  # ε
         """
         Refer to the paper to understand this equation better but basically,
@@ -62,6 +61,30 @@ class Diffusion:
         """
         q_xt = sqrt_alpha_hat * x + sqrt_one_minus_alpha_ht * epsilon
         return q_xt, epsilon
+
+    def denoise_drum_beats(self, model, x, noised_steps, text_embeddings):
+        batch_len = x.shape[0]
+        model.eval()
+        with torch.no_grad():
+            for i in tqdm(reversed(range(1, noised_steps)), position=0):
+                t = (torch.ones(batch_len) * i).long().to(self.device)
+                predicted_noise = model(x, t, text_embeddings).permute(0, 2, 1)
+                alpha = self.alpha[t][:, None, None]
+                alpha_hat = self.alpha_hat[t][:, None, None]
+                beta = self.beta[t][:, None, None]
+                if i > 1:
+                    noise = torch.randn_like(x)
+                else:
+                    noise = torch.zeros_like(x)
+                # x_t-1|(x_t, t)
+                x = 1 / torch.sqrt(alpha) * (
+                            x - ((1 - alpha) / (torch.sqrt(1 - alpha_hat))) * predicted_noise) + torch.sqrt(
+                    beta) * noise
+        model.train()
+        x = x.clamp(0, 1)
+        x = (x * 127).type(torch.uint8)
+        return x
+
 
     def sample_timesteps(self, n):
         return torch.randint(low=1, high=self.noise_steps, size=(n,))
@@ -89,6 +112,58 @@ class Diffusion:
         x = (x.clamp(-1, 1) + 1) / 2
         x = (x * 127).type(torch.uint8)
         return x
+
+    def sample_conditional(self, model, n, text_embeddings):
+        logging.info(f"Sampling {n} new drum beats")
+        model.eval()
+        with torch.no_grad():
+            x = torch.randn((n, self.width, self.height)).to(self.device)
+            for i in tqdm(reversed(range(1, self.noise_steps)), position=0):
+                t = (torch.ones(n) * i).long().to(self.device)
+                predicted_noise = model(x, t, text_embeddings).permute(0, 2, 1)
+                alpha = self.alpha[t][:, None, None]
+                alpha_hat = self.alpha_hat[t][:, None, None]
+                beta = self.beta[t][:, None, None]
+                if i > 1:
+                    noise = torch.randn_like(x)
+                else:
+                    noise = torch.zeros_like(x)
+                # x_t-1|(x_t, t)
+                x = 1 / torch.sqrt(alpha) * (
+                            x - ((1 - alpha) / (torch.sqrt(1 - alpha_hat))) * predicted_noise) + torch.sqrt(
+                    beta) * noise
+        model.train()
+        x = (x.clamp(0, 1)) / 2
+        x = (x * 127).type(torch.uint8)
+        return x
+
+    def _sample_conditional(self, model, text_embeddings):
+        """
+        This function returns the generated midi pianoroll with floating point values between (0, 1)
+        This is only used for testing and not for generating drum beats at inference.
+        """
+        model.eval()
+        n = len(text_embeddings)
+        with torch.no_grad():
+            x = torch.randn((n, self.width, self.height)).to(self.device)
+            for i in reversed(range(1, self.noise_steps)):
+                t = (torch.ones(n) * i).long().to(self.device)
+                predicted_noise = model(x, t, text_embeddings).permute(0, 2, 1)
+                alpha = self.alpha[t][:, None, None]
+                alpha_hat = self.alpha_hat[t][:, None, None]
+                beta = self.beta[t][:, None, None]
+                if i > 1:
+                    noise = torch.randn_like(x)
+                else:
+                    noise = torch.zeros_like(x)
+                # x_t-1|(x_t, t)
+                x = 1 / torch.sqrt(alpha) * (
+                            x - ((1 - alpha) / (torch.sqrt(1 - alpha_hat))) * predicted_noise) + torch.sqrt(
+                    beta) * noise
+        model.train()
+        x = (x.clamp(0, 1)) / 2
+        return x
+
 
 
 if __name__ == "__main__":

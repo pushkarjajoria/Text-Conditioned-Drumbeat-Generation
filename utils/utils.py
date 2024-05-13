@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
-from midi_processing.mid2numpy import save_numpy_as_midi
+from utils.midi_processing.mid2numpy import save_numpy_as_midi
 
 
 class MusicDataset(Dataset):
@@ -42,11 +42,21 @@ def save_images(images, path, **kwargs):
     im.save(path)
 
 
-def save_midi(midis, midi_path, epoch, ghost_threshold=5):
-    folder_path = os.path.join(midi_path, f"Epoch{epoch}")
+def save_midi(midis, midi_path, epoch=None, ghost_threshold=5, file_names=None, resolution=4):
+    name_str = f"Epoch{epoch}" if epoch else "Final model"
+    folder_path = os.path.join(midi_path, name_str)
     os.makedirs(folder_path, exist_ok=True)
     for i, midi_pianoroll in enumerate(midis):
-        save_numpy_as_midi(os.path.join(folder_path, f"Sample{i}.mid"), midi_pianoroll, ghost_threshold)
+        filename = file_names[i] + ".mid" if file_names else f"Sample{i}.mid"
+        save_numpy_as_midi(os.path.join(folder_path, filename), midi_pianoroll, ghost_threshold, resolution)
+
+
+def save_midi_without_structure(midis, midi_path, ghost_threshold=5, file_names=None, resolution=4):
+    folder_path = os.path.join(midi_path)
+    os.makedirs(folder_path, exist_ok=True)
+    for i, midi_pianoroll in enumerate(midis):
+        # filename = file_names[i] + ".mid" if file_names else f"Sample{i}.mid"
+        save_numpy_as_midi(os.path.join(folder_path, file_names[i]), midi_pianoroll, ghost_threshold, resolution)
 
 
 def get_data(args):
@@ -75,11 +85,11 @@ def get_image_data(args):
 
 
 def setup_logging(args):
-    os.makedirs("../../models", exist_ok=True)
+    os.makedirs("../../checkpoint", exist_ok=True)
     os.makedirs("../../results", exist_ok=True)
-    os.makedirs(os.path.join("../../models", args.run_name), exist_ok=True)
+    os.makedirs(os.path.join("../../checkpoint", args.run_name), exist_ok=True)
     os.makedirs(os.path.join("../../results", args.run_name), exist_ok=True)
-    with open(f'models/{args.run_name}/hyperparamets.txt', 'w') as f:
+    with open(f'checkpoint/{args.run_name}/hyperparamets.txt', 'w') as f:
         # Write dictionary to file as JSON
         f.write(json.dumps(vars(args), indent=4))
 

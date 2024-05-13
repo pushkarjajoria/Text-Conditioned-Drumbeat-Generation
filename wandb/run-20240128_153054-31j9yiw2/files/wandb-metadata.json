@@ -1,0 +1,36 @@
+{
+    "os": "macOS-14.1.2-arm64-arm-64bit",
+    "python": "3.10.4",
+    "heartbeatAt": "2024-01-28T15:30:55.667970",
+    "startedAt": "2024-01-28T15:30:54.791365",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "-m unsupervised_pretraining.main",
+    "codePathLocal": null,
+    "git": {
+        "remote": "git@github.com:pushkarjajoria/BeatBrewer.git",
+        "commit": "fffd0f43eb8307f0b810b05496ef411e7d7322b6"
+    },
+    "email": null,
+    "root": "/Users/pushkarjajoria/Git/BeatBrewer",
+    "host": "DSIs-MacBook-Pro.local",
+    "username": "pushkarjajoria",
+    "executable": "/opt/homebrew/Caskroom/miniconda/base/envs/audio_ddpm/bin/python",
+    "cpu_count": 8,
+    "cpu_count_logical": 8,
+    "disk": {
+        "/": {
+            "total": 228.27386474609375,
+            "used": 157.2574806213379
+        }
+    },
+    "gpuapple": {
+        "type": "arm",
+        "vendor": "Apple"
+    },
+    "memory": {
+        "total": 16.0
+    }
+}

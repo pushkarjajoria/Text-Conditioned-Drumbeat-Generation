@@ -6,7 +6,8 @@ from vector_to_midi import write_midi_and_audio_files_from_vectors
 
 
 def read_midi_files_and_return_vectors_and_tags(root_directory):
-    """Recursively read MIDI files from a nested directory with subfolders and converts them into 16th note vectors with all folders and parent folder as the corresponding tags for each vector"""
+    """Recursively read MIDI files from a nested directory with subfolders and converts them into 16th note vectors
+    with all folders and parent folder as the corresponding tags for each vector"""
     all_vectors = []
     for subdir, dirs, files in tqdm(os.walk(root_directory)):
         for file in files:
@@ -54,7 +55,8 @@ def read_midi_files_and_return_vectors_and_tags(root_directory):
 
 
 # Usage example
-root_directory = '/Users/pushkarjajoria/Downloads/Groove Monkee Free MIDI GM'
-vectors = read_midi_files_and_return_vectors_and_tags(root_directory)
-write_midi_and_audio_files_from_vectors([vectors[0]], "./")
-print(vectors)
+if __name__ == "__main__":
+    root_directory = '/Users/pushkarjajoria/Downloads/Groove Monkee Free MIDI GM'
+    vectors = read_midi_files_and_return_vectors_and_tags(root_directory)
+    write_midi_and_audio_files_from_vectors([vectors[0]], "./")
+    print(vectors)
