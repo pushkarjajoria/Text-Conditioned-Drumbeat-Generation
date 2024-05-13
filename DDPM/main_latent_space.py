@@ -16,7 +16,7 @@ from DDPM.model import ConditionalUNet
 from Midi_Encoder.model import EncoderDecoder
 from text_supervised_pretraining.create_unsupervised_dataset import get_filenames_and_tags, MidiDataset
 from text_supervised_pretraining.main import EarlyStopping, save_checkpoint
-from utils.utils import get_data, save_midi
+from utils.utils import get_data, save_midi, save_midi_demo
 import torch.nn as nn
 
 
@@ -149,6 +149,38 @@ def generate(config):
     file_names = list(text_prompts)
     sampled_beats = sampled_beats.transpose((0, 2, 1))
     save_midi(sampled_beats, config['results_dir'], file_names=file_names)
+    print("Done")
+
+
+def demo():
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    diffusion = LatentDiffusion(latent_dimension=128)
+
+    model = ConditionalUNet(time_encoding_dim=16).to(device)
+    model_state_path = "demo_models/ddpm.pth"
+    if torch.cuda.is_available():
+        model.load_state_dict(torch.load(model_state_path))
+    else:
+        model.load_state_dict(torch.load(model_state_path, map_location=torch.device('cpu')))
+    model.eval()
+    print("Enter the text prompt for a drumbeat...")
+    text = input()
+    text_prompts = [text, text]
+    autoencoder_config_path = "Midi_Encoder/config.yaml"
+    autoencoder_model_path = "demo_models/autoencoder.pt"
+    midi_encoder_decoder = EncoderDecoder(autoencoder_config_path).to(device)
+    if torch.cuda.is_available():
+        midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path))
+    else:
+        midi_encoder_decoder.load_state_dict(torch.load(autoencoder_model_path, map_location=torch.device('cpu')))
+
+    print("Loaded encoder decoder model successfully.")
+
+    sampled_beats = diffusion.sample_conditional(model, n=len(text_prompts),
+                                                 text_keywords=text_prompts, midi_decoder=midi_encoder_decoder).numpy().squeeze()
+    file_names = list(map(lambda x: (x[1] + " " + str(x[0])).replace("/", "-"), enumerate(text_prompts)))
+    sampled_beats = sampled_beats.transpose((0, 2, 1))
+    save_midi_demo(sampled_beats, "demo_midi_files", file_names=file_names)
     print("Done")
 
 

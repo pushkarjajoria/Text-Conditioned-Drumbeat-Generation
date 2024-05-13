@@ -1,8 +1,6 @@
 import json
 import os
 
-import torchvision
-from PIL import Image
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
@@ -35,16 +33,17 @@ def plot_images(images):
     plt.show()
 
 
-def save_images(images, path, **kwargs):
-    grid = torchvision.utils.make_grid(images, **kwargs)
-    ndarr = grid.permute(1, 2, 0).to('cpu').numpy()
-    im = Image.fromarray(ndarr)
-    im.save(path)
-
-
 def save_midi(midis, midi_path, epoch=None, ghost_threshold=5, file_names=None, resolution=4):
     name_str = f"Epoch{epoch}" if epoch else "Final model"
     folder_path = os.path.join(midi_path, name_str)
+    os.makedirs(folder_path, exist_ok=True)
+    for i, midi_pianoroll in enumerate(midis):
+        filename = file_names[i] + ".mid" if file_names else f"Sample{i}.mid"
+        save_numpy_as_midi(os.path.join(folder_path, filename), midi_pianoroll, ghost_threshold, resolution)
+
+
+def save_midi_demo(midis, midi_path, epoch=None, ghost_threshold=5, file_names=None, resolution=4):
+    folder_path = midi_path
     os.makedirs(folder_path, exist_ok=True)
     for i, midi_pianoroll in enumerate(midis):
         filename = file_names[i] + ".mid" if file_names else f"Sample{i}.mid"
@@ -68,18 +67,6 @@ def get_data(args):
     # create the dataset
     dataset = MusicDataset(data)
     # create the dataloader object
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
-    return dataloader
-
-
-def get_image_data(args):
-    transforms = torchvision.transforms.Compose([
-        torchvision.transforms.Resize(80),  # args.image_size + 1/4 *args.image_size
-        torchvision.transforms.RandomResizedCrop(args.image_size, scale=(0.8, 1.0)),
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ])
-    dataset = torchvision.datasets.ImageFolder(args.dataset_path, transform=transforms)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
     return dataloader
 

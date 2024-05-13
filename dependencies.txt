@@ -1,0 +1,10 @@
+pip install pyyaml
+pip install tqdm
+pip install torch
+pip install numpy
+pip install matplotlib
+pip install scikit-learn
+pip install git+https://github.com/jmmcd/python-midi/
+pip install transformers
+# Replace the path to the project pointing to the root dir of BeatBrewer
+export PYTHONPATH=/path/to/your/project_root:$PYTHONPATH
