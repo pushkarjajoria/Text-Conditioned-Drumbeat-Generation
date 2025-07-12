@@ -121,16 +121,3 @@ If you use this code or refer to the paper, please cite:
 ```
 
 ---
-
-## 📄 License
-
-The code is released under a permissive open license. You may use and adapt it freely, but please give credit by citing the paper above.
-
----
-
-<p align="center">
-  <i>Developed at Saarland University, University of Galway.</i>
-</p>
-```
-
----
