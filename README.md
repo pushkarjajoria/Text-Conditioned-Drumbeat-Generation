@@ -54,8 +54,8 @@ We present a three-stage pipeline to synthesize drumbeats conditioned on text:
 
 ```bash
 # Create and activate env (Python 3.10+ recommended)
-conda create -n beatbrewer python=3.10
-conda activate beatbrewer
+conda create -n ddpm python=3.10
+conda activate ddpm
 
 # Install dependencies
 pip install pyyaml tqdm torch numpy matplotlib scikit-learn transformers
