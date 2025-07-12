@@ -13,7 +13,7 @@ This repository provides code for generating symbolic drumbeats from natural lan
 
 ---
 
-## 🧠 Project Overview
+## Project Overview
 
 <p align="center">
   <img src="images/Generation_Flow_Horizontal.png" width="100%"/>
