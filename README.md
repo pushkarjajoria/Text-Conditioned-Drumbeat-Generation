@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="images/University_Of_Galway_Logo__Positive_Portrait.png" height="90"/>
+  <img src="images/University_Of_Galway_Logo__Positive_Portrait.jpg" height="90"/>
   <img src="images/lsv-logo_no-background_page.jpg" height="90"/>
   <img src="images/uds-eule_page-0001.jpg" height="90"/>
 </p>
