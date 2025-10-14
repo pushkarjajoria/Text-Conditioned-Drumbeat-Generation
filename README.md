@@ -9,6 +9,8 @@
 
 > 🎶 Published at [SMC 2025 — Sound and Music Computing Conference](https://smc25.iem.at/), Graz
 
+> NOTE: Due to legal reasons we will not be able to provide the model weights. 
+
 This repository provides code for generating symbolic drumbeats from natural language descriptions (text prompts) using **Latent Diffusion Models (LDMs)**. This was developed as part of the research presented in our SMC 2025 paper and introduces a multi-stage training pipeline combining multimodal pretraining, autoencoding, and diffusion modeling.
 
 ---
